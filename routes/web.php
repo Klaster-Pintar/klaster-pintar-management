@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\ProfileController;
+use App\Http\Controllers\Admin\UserController;
 
 Route::get('/', function () {
     if (Auth::check()) {
@@ -32,6 +33,9 @@ Route::middleware('auth')->group(function () {
         Route::post('/settings', [ProfileController::class, 'update'])->name('settings.update');
         Route::post('/settings/password', [ProfileController::class, 'updatePassword'])->name('settings.password');
         Route::post('/settings/avatar', [ProfileController::class, 'uploadAvatar'])->name('settings.avatar');
+
+        // User Management Routes
+        Route::resource('users', UserController::class);
     });
 });
 
