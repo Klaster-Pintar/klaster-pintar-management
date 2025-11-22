@@ -18,11 +18,21 @@ class User extends Authenticatable
      * @var string
      */
     protected $table;
-    public function __construct($attr = array(), $exists = false)
+
+    /**
+     * Get the table associated with the model.
+     *
+     * @return string
+     */
+    public function getTable()
     {
-        parent::__construct($attr, $exists);
-        $this->table = env('TABLE_PREFIX') . 'm_users';
+        if (!isset($this->table)) {
+            $this->table = env('TABLE_PREFIX', '') . 'm_users';
+        }
+
+        return $this->table;
     }
+
     /**
      * The attributes that are mass assignable.
      *

@@ -69,7 +69,7 @@
 
             <!-- Icon di Pojok Kanan Atas -->
             <div class="absolute top-6 right-6 z-20">
-                <i class="fa-solid fa-droplet text-white text-4xl opacity-80"></i>
+                <img src="{{ asset('images/icon.png') }}" class="w-12 h-12 opacity-90" alt="Login Icon" />
             </div>
 
             <!-- Content Container -->
@@ -84,18 +84,18 @@
                 <div class="text-white">
                     <!-- Main Title -->
                     <h1 class="text-3xl lg:text-4xl xl:text-5xl font-bold mb-3 leading-tight">
-                        IMANAGEMENT
+                        iManagement
                     </h1>
 
                     <!-- Subtitle -->
-                    <h2 class="text-xl lg:text-2xl xl:text-3xl font-semibold mb-6">
-                        Smart Reservoir
+                    <h2 class="text-xl lg:text-2xl xl:text-3xl font-semibold mb-4">
+                        App Management Merchant & Klaster iHome — Semua Data, Satu Tempat
                     </h2>
 
                     <!-- Description -->
                     <p class="text-sm lg:text-base leading-relaxed opacity-90">
-                        Sistem manajemen cerdas untuk monitoring dan pengelolaan
-                        reservoir secara real-time
+                        Platform untuk pemilik (owner) yang mengelola data merchant dan klaster iHome secara
+                        terpusat — verifikasi, monitoring, dan kontrol operasional dalam satu dashboard.
                     </p>
                 </div>
             </div>

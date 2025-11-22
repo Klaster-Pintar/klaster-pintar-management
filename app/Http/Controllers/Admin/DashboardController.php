@@ -14,12 +14,9 @@ class DashboardController extends Controller
     {
         // Sample data for dashboard - replace with actual queries later
         $data = [
-            'total_clusters' => 125,
-            'clusters_in_repair' => 9,
-            'total_visitors' => 1126,
-            'total_workers' => 1071,
-            'total_patrols' => 219,
-            'total_reports' => 281,
+            'active_clusters' => 128,
+            'pending_subscriptions' => 12,
+            'total_revenue' => 125000000,
         ];
 
         return view('admin.dashboard', $data);

@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\ProfileController;
 
 Route::get('/', function () {
     if (Auth::check()) {
@@ -25,6 +26,12 @@ Route::middleware('auth')->group(function () {
     // Admin Dashboard Routes
     Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+
+        // Profile Settings Routes
+        Route::get('/settings', [ProfileController::class, 'edit'])->name('settings');
+        Route::post('/settings', [ProfileController::class, 'update'])->name('settings.update');
+        Route::post('/settings/password', [ProfileController::class, 'updatePassword'])->name('settings.password');
+        Route::post('/settings/avatar', [ProfileController::class, 'uploadAvatar'])->name('settings.avatar');
     });
 });
 
