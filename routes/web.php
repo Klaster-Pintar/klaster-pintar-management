@@ -6,6 +6,7 @@ use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\ProfileController;
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\Admin\ClusterController;
 
 Route::get('/', function () {
     if (Auth::check()) {
@@ -36,6 +37,9 @@ Route::middleware('auth')->group(function () {
 
         // User Management Routes
         Route::resource('users', UserController::class);
+
+        // Cluster Management Routes
+        Route::resource('clusters', ClusterController::class);
     });
 });
 

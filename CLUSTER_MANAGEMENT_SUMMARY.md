@@ -1,0 +1,484 @@
+# Cluster Management Module - Implementation Summary
+
+## 📋 Overview
+
+Modul **Cluster Management** telah berhasil dibuat untuk mengelola pendaftaran dan administrasi cluster dalam sistem iHome. Modul ini menggunakan **wizard 6 langkah** untuk memandu proses pendaftaran cluster baru dengan tampilan yang profesional dan elegan.
+
+---
+
+## ✅ Files Created
+
+### 1. **Eloquent Models** (7 files)
+
+#### `app/Models/Cluster.php`
+
+-   **Purpose:** Model utama untuk tabel `ihm_m_clusters`
+-   **Features:**
+    -   SoftDeletes trait
+    -   Dynamic table prefix (`ihm_` dari env)
+    -   Relationships: offices, patrols, employees, securities, bankAccounts, residents
+    -   Casts: active_flag (boolean), radius settings (integer)
+
+#### `app/Models/ClusterOffice.php`
+
+-   **Purpose:** Model untuk kantor/pos cluster
+-   **Table:** `ihm_m_cluster_d_offices`
+-   **Features:** location_point (POINT geometry), type_id, belongsTo Cluster
+
+#### `app/Models/ClusterPatrol.php`
+
+-   **Purpose:** Model untuk titik patroli cluster
+-   **Table:** `ihm_m_cluster_d_patrols`
+-   **Features:** pinpoints (JSON array), day_type_id, belongsTo Cluster
+
+#### `app/Models/ClusterEmployee.php`
+
+-   **Purpose:** Model untuk karyawan cluster (RT/RW/ADMIN)
+-   **Table:** `ihm_m_cluster_d_employees`
+-   **Features:** employee_id FK to users, belongsTo Cluster and User
+
+#### `app/Models/ClusterSecurity.php`
+
+-   **Purpose:** Model untuk security cluster
+-   **Table:** `ihm_m_cluster_d_securities`
+-   **Features:** security_id FK to users, belongsTo Cluster and User
+
+#### `app/Models/ClusterBankAccount.php`
+
+-   **Purpose:** Model untuk rekening bank cluster
+-   **Table:** `ihm_m_cluster_d_bank_accounts`
+-   **Features:** account_number, account_holder, bank_type, bank_code_id, is_verified
+
+#### `app/Models/ClusterResident.php`
+
+-   **Purpose:** Model untuk resident/warga cluster (optional, for future)
+-   **Table:** `ihm_m_cluster_d_residents`
+-   **Features:** resident_id FK to users, belongsTo Cluster and User
+
+---
+
+### 2. **Controller**
+
+#### `app/Http/Controllers/Admin/ClusterController.php`
+
+-   **Purpose:** Handle all cluster CRUD operations and wizard submission
+-   **Key Methods:**
+    -   `index()` - List all clusters with search/filter
+    -   `create()` - Show wizard form
+    -   `store()` - Process wizard submission (6 steps in DB transaction)
+    -   `show()` - Display cluster details
+    -   `edit()` - Edit cluster
+    -   `update()` - Update cluster
+    -   `destroy()` - Soft delete cluster
+
+**Store Method Features:**
+
+-   ✅ Validates all 6 wizard steps
+-   ✅ Handles file uploads (logo, picture) → `storage/app/public/clusters/{logos|pictures}`
+-   ✅ Creates cluster record
+-   ✅ Creates related offices with coordinates
+-   ✅ Creates patrol points (optional)
+-   ✅ **Auto-creates User records** for employees with roles (RT/RW/ADMIN)
+-   ✅ **Auto-creates User records** for securities with role SECURITY
+-   ✅ Creates employee/security links
+-   ✅ Creates bank account records
+-   ✅ DB Transaction with rollback on error
+-   ✅ Username uniqueness validation
+
+---
+
+### 3. **Views**
+
+#### `resources/views/admin/clusters/index.blade.php`
+
+-   **Purpose:** Cluster listing page
+-   **Features:**
+    -   Search & filter form (name, email, phone, status)
+    -   Grid card layout (1/2/3 columns responsive)
+    -   Cards show: logo, picture, name, description, contacts, stats
+    -   Stats: Employee count, Security count, Office count
+    -   Status badges: Active/Inactive (green/red)
+    -   Action buttons: Detail (blue), Edit (green)
+    -   Empty state with "Tambah Cluster Pertama" CTA
+    -   Pagination support
+-   **Color Theme:** Green (#10b981, #059669)
+
+#### `resources/views/admin/clusters/wizard/index.blade.php`
+
+-   **Purpose:** Main wizard container
+-   **Features:**
+    -   6-step progress indicator with visual states:
+        -   Pending: Gray circle with border
+        -   Active: Blue gradient with pulse animation
+        -   Completed: Green gradient with checkmark
+    -   Alpine.js state management (`clusterWizard()`)
+    -   Form data structure for all 6 steps
+    -   Navigation buttons: Back, Next, Submit
+    -   Step validation
+    -   Array helpers: add/remove for offices, employees, securities, banks
+-   **Design:** Professional gradient background, smooth transitions
+
+#### Wizard Steps (6 files)
+
+##### `resources/views/admin/clusters/wizard/steps/step1-basic.blade.php`
+
+**Step 1: Informasi Dasar Cluster**
+
+-   Fields:
+    -   Logo upload (optional, preview, drag & drop)
+    -   Picture upload (optional, preview, drag & drop)
+    -   Name\* (required)
+    -   Description (textarea)
+    -   Phone\* (required)
+    -   Email\* (required)
+    -   Radius Check-in (5m default)
+    -   Radius Patrol (5m default)
+-   Color Theme: Blue
+
+##### `resources/views/admin/clusters/wizard/steps/step2-offices.blade.php`
+
+**Step 2: Kantor & Pos Lokasi**
+
+-   Fields per office:
+    -   Name\* (required)
+    -   Type\* (dropdown: Pos Security, Kantor Pengelola, Sekretariat, Lainnya)
+    -   Latitude\* (required)
+    -   Longitude\* (required)
+-   Features:
+    -   Dynamic array (add/remove offices)
+    -   Google Maps link helper
+    -   Info box with coordinate tips
+    -   Minimum 1 office required
+-   Color Theme: Orange
+
+##### `resources/views/admin/clusters/wizard/steps/step3-patrols.blade.php`
+
+**Step 3: Titik Patroli**
+
+-   Fields:
+    -   Day Type (Weekday/Weekend)
+    -   Pinpoints (mock UI for now)
+-   Features:
+    -   Mock UI showing Google Maps integration placeholder
+    -   Info box explaining patrol points concept
+    -   "Skip" option - can configure later
+    -   Future: Google Maps marker interface
+-   Color Theme: Indigo
+
+##### `resources/views/admin/clusters/wizard/steps/step4-employees.blade.php`
+
+**Step 4: Karyawan/Admin Cluster**
+
+-   Fields per employee:
+    -   Name\* (required)
+    -   Username\* (required, must be unique)
+    -   Email
+    -   Phone
+    -   Role\* (dropdown: RT, RW, ADMIN)
+    -   Password\* (required)
+-   Features:
+    -   Dynamic array (add/remove employees)
+    -   Role selection (RT/RW/ADMIN)
+    -   **Auto-creates User record** with selected role
+    -   Info box: explains auto-user creation, username uniqueness
+    -   Can skip if no employees yet
+-   Color Theme: Purple
+-   **Important:** Username must be unique across all users!
+
+##### `resources/views/admin/clusters/wizard/steps/step5-securities.blade.php`
+
+**Step 5: Security Personnel**
+
+-   Fields per security:
+    -   Name\* (required)
+    -   Username\* (required, must be unique)
+    -   Email
+    -   Phone
+    -   Password\* (required)
+    -   **Role: SECURITY (auto-set, not user-selectable)**
+-   Features:
+    -   Dynamic array (add/remove securities)
+    -   **Auto-creates User record** with fixed SECURITY role
+    -   Info box: explains auto-user creation, username uniqueness
+    -   Can skip if no securities yet
+-   Color Theme: Indigo
+-   **Important:** Username must be unique across all users!
+
+##### `resources/views/admin/clusters/wizard/steps/step6-banks.blade.php`
+
+**Step 6: Rekening Bank**
+
+-   Fields per bank account:
+    -   Bank Type\* (dropdown: BCA, BRI, BNI, Mandiri, CIMB, Permata, BTN, Danamon, BSI, Lainnya)
+    -   Bank Code\* (number, e.g., 014 for BCA)
+    -   Account Number\* (required)
+    -   Account Holder\* (required)
+-   Features:
+    -   Dynamic array (add/remove bank accounts)
+    -   Common bank codes reference (BCA:014, BRI:002, etc.)
+    -   Info box: verification notice, multiple accounts allowed
+    -   Minimum 1 bank account required
+-   Color Theme: Emerald/Green
+-   **Important:** Rekening akan diverifikasi oleh admin sebelum dapat digunakan
+
+---
+
+### 4. **Routes** (`routes/web.php`)
+
+```php
+// Cluster Management Routes
+Route::resource('clusters', ClusterController::class);
+```
+
+**Generated Routes:**
+
+-   `GET /admin/clusters` → index (list all clusters)
+-   `GET /admin/clusters/create` → create (show wizard)
+-   `POST /admin/clusters` → store (process wizard)
+-   `GET /admin/clusters/{id}` → show (view details)
+-   `GET /admin/clusters/{id}/edit` → edit (edit form)
+-   `PUT /admin/clusters/{id}` → update (save edits)
+-   `DELETE /admin/clusters/{id}` → destroy (soft delete)
+
+---
+
+### 5. **Sidebar Menu** (`resources/views/components/admin/sidebar.blade.php`)
+
+Updated "Master" menu section:
+
+-   ✅ **Cluster Management** menu item added
+-   Route: `{{ route('admin.clusters.index') }}`
+-   Icon: `fa-building-circle-check` (green theme)
+-   Active menu: `master.cluster`
+-   Color: Green highlight when active
+
+---
+
+## 🗄️ Database Structure
+
+### Tables Used (Existing - DO NOT modify)
+
+1. **`ihm_m_clusters`** - Main cluster table
+
+    - Columns: name, description, phone, email, logo, picture, radius_checkin, radius_patrol, active_flag
+    - Auto-managed: created_by, updated_by, created_at, updated_at, deleted_at
+
+2. **`ihm_m_cluster_d_offices`** - Office locations (1:N)
+
+    - Columns: name, type_id, location_point (POINT), ihm_m_clusters_id (FK)
+
+3. **`ihm_m_cluster_d_patrols`** - Patrol points (1:N)
+
+    - Columns: day_type_id, pinpoints (JSON), ihm_m_clusters_id (FK)
+
+4. **`ihm_m_cluster_d_employees`** - Employee links (1:N)
+
+    - Columns: employee_id (FK to users), ihm_m_clusters_id (FK)
+
+5. **`ihm_m_cluster_d_securities`** - Security links (1:N)
+
+    - Columns: security_id (FK to users), ihm_m_clusters_id (FK)
+
+6. **`ihm_m_cluster_d_bank_accounts`** - Bank accounts (1:N)
+
+    - Columns: account_number, account_holder, bank_type, bank_code_id, is_verified, ihm_m_clusters_id (FK)
+
+7. **`ihm_m_cluster_d_residents`** - Resident links (1:N, optional)
+    - Columns: resident_id (FK to users), ihm_m_clusters_id (FK)
+
+---
+
+## 🎨 Design & UI/UX
+
+### Color Themes
+
+-   **Cluster Index Page:** Green (#10b981, #059669)
+-   **Wizard Container:** Gradient (gray-blue-green)
+-   **Step 1 (Basic):** Blue
+-   **Step 2 (Offices):** Orange
+-   **Step 3 (Patrols):** Indigo
+-   **Step 4 (Employees):** Purple
+-   **Step 5 (Securities):** Indigo
+-   **Step 6 (Banks):** Emerald/Green
+
+### Icons (Font Awesome 6.5.0)
+
+-   Cluster: `fa-building-circle-check`
+-   Dashboard: `fa-house`
+-   Basic Info: `fa-info-circle`
+-   Offices: `fa-building`
+-   Patrols: `fa-route`
+-   Employees: `fa-users`
+-   Securities: `fa-shield-halved`
+-   Banks: `fa-building-columns`
+
+### Progress Indicator
+
+-   Visual states: Pending (gray) → Active (blue pulse) → Completed (green checkmark)
+-   Progress line connects all steps
+-   Responsive: 3 cols mobile, 6 cols desktop
+
+---
+
+## 🔄 Wizard Flow
+
+1. **Step 1: Informasi Dasar** → Input cluster name, contacts, upload logo/picture, set radius
+2. **Step 2: Kantor & Pos** → Add office locations with coordinates (minimum 1 required)
+3. **Step 3: Titik Patroli** → Configure patrol points (optional, can skip)
+4. **Step 4: Karyawan** → Add employees (RT/RW/ADMIN), auto-creates users (optional)
+5. **Step 5: Security** → Add security personnel, auto-creates users with SECURITY role (optional)
+6. **Step 6: Rekening Bank** → Add bank accounts (minimum 1 required)
+7. **Submit** → Processes all data in single DB transaction
+
+### Validation Rules
+
+-   **Required Fields:**
+    -   Step 1: name, phone, email
+    -   Step 2: At least 1 office with name, type, lat, long
+    -   Step 6: At least 1 bank account with all fields
+-   **Optional:**
+    -   Step 1: logo, picture, description
+    -   Step 3: patrol points
+    -   Step 4: employees
+    -   Step 5: securities
+-   **Unique Constraints:**
+    -   Employee usernames (across all users)
+    -   Security usernames (across all users)
+
+---
+
+## 🚀 How to Use
+
+### 1. Access Cluster Management
+
+-   Login to admin panel
+-   Click "Master" menu in sidebar
+-   Click "Cluster Management"
+
+### 2. Create New Cluster
+
+-   Click "Tambah Cluster Baru" button
+-   Follow wizard steps 1-6
+-   Fill required fields (marked with red asterisk \*)
+-   Click "Selanjutnya" to proceed to next step
+-   Click "Kembali" to go back
+-   Click "Selesai & Simpan" on step 6 to submit
+
+### 3. View Cluster Details
+
+-   From cluster listing page
+-   Click "Detail" button on any cluster card
+-   **Note:** Show page not yet created (TODO)
+
+### 4. Edit Cluster
+
+-   From cluster listing page
+-   Click "Edit" button on any cluster card
+-   **Note:** Edit page not yet created (TODO)
+
+### 5. Delete Cluster
+
+-   **Note:** Delete functionality in controller, needs confirmation modal in UI (TODO)
+
+---
+
+## 📝 Important Notes
+
+### Auto-User Creation
+
+-   **Employees:** When you add employees in Step 4, the system automatically creates user accounts with the selected role (RT/RW/ADMIN)
+-   **Securities:** When you add securities in Step 5, the system automatically creates user accounts with fixed SECURITY role
+-   **Username Uniqueness:** Ensure all usernames are unique across the entire user table
+-   **Password:** Default password or specified password will be hashed (bcrypt)
+
+### File Uploads
+
+-   **Logo:** Stored in `storage/app/public/clusters/logos/`
+-   **Picture:** Stored in `storage/app/public/clusters/pictures/`
+-   **Access:** Run `php artisan storage:link` to create symlink for public access
+
+### Database Transaction
+
+-   All wizard data saved in **single transaction**
+-   If any step fails, entire operation rolls back
+-   Ensures data integrity
+
+---
+
+## 🔧 TODO / Future Enhancements
+
+### High Priority
+
+-   [ ] Create cluster **show/detail** page with tabs for all related data
+-   [ ] Create cluster **edit** page (reuse wizard or separate forms)
+-   [ ] Add **delete confirmation** modal
+-   [ ] Implement **Google Maps integration** for:
+    -   Office location picker (Step 2)
+    -   Patrol point marker interface (Step 3)
+    -   Visual map display in cluster details
+
+### Medium Priority
+
+-   [ ] **Step 7: Residents** (optional) - Excel upload for bulk resident import
+-   [ ] Add **image crop/resize** functionality for logo and picture uploads
+-   [ ] Implement **bank account verification** workflow
+-   [ ] Add **cluster activation/deactivation** toggle
+-   [ ] Create **audit trail** for cluster changes
+
+### Low Priority
+
+-   [ ] Add **export to Excel/PDF** for cluster list
+-   [ ] Implement **bulk import** clusters via CSV/Excel
+-   [ ] Add **cluster statistics** dashboard widget
+-   [ ] Create **notification system** for cluster approval workflow
+-   [ ] Add **multi-language support** for wizard
+
+---
+
+## 🧪 Testing Checklist
+
+### Manual Testing
+
+-   [ ] Navigate to `/admin/clusters` and verify listing page loads
+-   [ ] Click "Tambah Cluster Baru" and verify wizard opens
+-   [ ] Complete all 6 wizard steps with valid data
+-   [ ] Submit wizard and verify:
+    -   [ ] Cluster created in `ihm_m_clusters`
+    -   [ ] Offices created in `ihm_m_cluster_d_offices`
+    -   [ ] Employees created: users in `ihm_m_users` + links in `ihm_m_cluster_d_employees`
+    -   [ ] Securities created: users in `ihm_m_users` + links in `ihm_m_cluster_d_securities`
+    -   [ ] Bank accounts created in `ihm_m_cluster_d_bank_accounts`
+-   [ ] Test validation errors:
+    -   [ ] Try submitting without required fields
+    -   [ ] Try duplicate username for employee/security
+-   [ ] Test file uploads:
+    -   [ ] Upload logo and verify it's stored correctly
+    -   [ ] Upload picture and verify it's stored correctly
+-   [ ] Test navigation:
+    -   [ ] "Kembali" button works correctly
+    -   [ ] "Selanjutnya" button works correctly
+    -   [ ] Step indicator shows correct state
+
+### Database Testing
+
+-   [ ] Verify all foreign keys correctly linked
+-   [ ] Verify soft deletes work (deleted_at column)
+-   [ ] Verify created_by/updated_by tracking
+-   [ ] Verify transaction rollback on error
+
+---
+
+## 📞 Support
+
+For questions or issues related to this module, please refer to:
+
+-   `.github/copilot-instructions.md` - Project guidelines
+-   `DASHBOARD_IMPROVEMENTS.md` - Previous improvements
+-   This file: `CLUSTER_MANAGEMENT_SUMMARY.md`
+
+---
+
+**Created:** January 2025  
+**Version:** 1.0.0  
+**Status:** ✅ Core Implementation Complete  
+**Next Phase:** Show/Edit pages + Google Maps integration

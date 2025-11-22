@@ -69,9 +69,9 @@
                         <i class="fa-solid fa-user-shield w-4"></i>
                         <span>Owner Management</span>
                     </a>
-                    <a href="#"
-                        class="flex items-center gap-2 px-3 py-1.5 rounded-md transition-all text-xs {{ $activeMenu === 'master.cluster' ? 'bg-blue-500 text-white font-medium' : 'hover:bg-blue-50 text-gray-600' }}">
-                        <i class="fa-solid fa-warehouse w-4"></i>
+                    <a href="{{ route('admin.clusters.index') }}"
+                        class="flex items-center gap-2 px-3 py-1.5 rounded-md transition-all text-xs {{ $activeMenu === 'master.cluster' ? 'bg-green-500 text-white font-medium' : 'hover:bg-green-50 text-gray-600' }}">
+                        <i class="fa-solid fa-building-circle-check w-4"></i>
                         <span>Cluster Management</span>
                     </a>
                 </div>
