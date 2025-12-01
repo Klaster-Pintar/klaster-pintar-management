@@ -70,6 +70,27 @@ class Cluster extends Model
         return $this->hasMany(ClusterResident::class, 'ihm_m_clusters_id');
     }
 
+    public function subscriptions()
+    {
+        return $this->hasMany(ClusterSubscription::class, 'cluster_id');
+    }
+
+    public function activeSubscription()
+    {
+        return $this->hasOne(ClusterSubscription::class, 'cluster_id')
+            ->where('active', true)
+            ->where('status', 'ACTIVE')
+            ->where('expired_at', '>=', now())
+            ->orderBy('expired_at', 'desc');
+    }
+
+    public function expiredSubscription()
+    {
+        return $this->hasOne(ClusterSubscription::class, 'cluster_id')
+            ->where('expired_at', '<', now())
+            ->orderBy('expired_at', 'desc');
+    }
+
     public function creator()
     {
         return $this->belongsTo(User::class, 'created_id');

@@ -6,14 +6,13 @@
             <i class="fa-solid fa-bars"></i>
         </button>
 
-        <!-- Date & Time -->
+        <!-- Date & Time (Real-time) -->
         <h2 class="text-sm lg:text-lg font-semibold text-gray-700 flex items-center gap-2">
             <i class="fa-regular fa-calendar text-blue-600"></i>
-            <span
-                class="hidden sm:inline">{{ \Carbon\Carbon::now()->locale('id')->isoFormat('dddd, DD-MM-YYYY') }}</span>
-            <span class="sm:hidden">{{ \Carbon\Carbon::now()->format('d/m/Y') }}</span>
+            <span id="live-date" class="hidden sm:inline">-</span>
+            <span id="live-date-short" class="sm:hidden">-</span>
             <i class="fa-regular fa-clock text-blue-600 ml-2"></i>
-            <span>{{ \Carbon\Carbon::now()->format('H:i') }}</span>
+            <span id="live-time">--:--</span>
         </h2>
 
         <!-- Right Icons & User Dropdown -->
@@ -87,3 +86,46 @@
         </div>
     </div>
 </header>
+
+<script>
+    // Real-time Clock Function for Header
+    function updateHeaderClock() {
+        const now = new Date();
+
+        // Format time (HH:MM)
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        const timeString = `${hours}:${minutes}`;
+
+        // Format date full (Hari, DD-MM-YYYY)
+        const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+        const dayName = days[now.getDay()];
+        const day = String(now.getDate()).padStart(2, '0');
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const year = now.getFullYear();
+        const dateStringFull = `${dayName}, ${day}-${month}-${year}`;
+
+        // Format date short (DD/MM/YYYY)
+        const dateStringShort = `${day}/${month}/${year}`;
+
+        // Update DOM
+        const timeElement = document.getElementById('live-time');
+        const dateElement = document.getElementById('live-date');
+        const dateShortElement = document.getElementById('live-date-short');
+
+        if (timeElement) timeElement.textContent = timeString;
+        if (dateElement) dateElement.textContent = dateStringFull;
+        if (dateShortElement) dateShortElement.textContent = dateStringShort;
+    }
+
+    // Start clock when DOM is ready
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function () {
+            updateHeaderClock();
+            setInterval(updateHeaderClock, 1000);
+        });
+    } else {
+        updateHeaderClock();
+        setInterval(updateHeaderClock, 1000);
+    }
+</script>

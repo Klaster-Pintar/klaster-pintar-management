@@ -94,7 +94,12 @@
                 </button>
 
                 <div x-show="open" x-collapse class="mt-1 space-y-0.5 ml-11">
-                    <a href="#"
+                    <a href="{{ route('admin.finance.settlement.index') }}"
+                        class="flex items-center gap-2 px-3 py-1.5 rounded-md transition-all text-xs {{ $activeMenu === 'finance.settlement' ? 'bg-green-500 text-white font-medium' : 'hover:bg-green-50 text-gray-600' }}">
+                        <i class="fa-solid fa-money-bill-transfer w-4"></i>
+                        <span>Settlement</span>
+                    </a>
+                    <a href="{{ route('admin.finance.subscription.index') }}"
                         class="flex items-center gap-2 px-3 py-1.5 rounded-md transition-all text-xs {{ $activeMenu === 'finance.subscription' ? 'bg-green-500 text-white font-medium' : 'hover:bg-green-50 text-gray-600' }}">
                         <i class="fa-solid fa-receipt w-4"></i>
                         <span>Cluster Subscription</span>

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Cluster;
 use Illuminate\Http\Request;
 
 class DashboardController extends Controller
@@ -12,11 +13,11 @@ class DashboardController extends Controller
      */
     public function index()
     {
-        // Sample data for dashboard - replace with actual queries later
+        // Get real data from database
         $data = [
-            'active_clusters' => 128,
-            'pending_subscriptions' => 12,
-            'total_revenue' => 125000000,
+            'active_clusters' => Cluster::where('active_flag', 1)->count(),
+            'pending_subscriptions' => 0, // Set to 0 as requested
+            'total_revenue' => 0, // Set to 0 as requested
         ];
 
         return view('admin.dashboard', $data);

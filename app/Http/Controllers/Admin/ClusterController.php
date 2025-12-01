@@ -109,6 +109,12 @@ class ClusterController extends Controller
 
             // Step 7: Residents CSV
             'residents_csv_data' => 'nullable|json',
+
+            // Step 4: Employees CSV
+            'employees_csv_data' => 'nullable|json',
+
+            // Step 5: Securities CSV
+            'securities_csv_data' => 'nullable|json',
         ]);
 
         DB::beginTransaction();
@@ -164,7 +170,7 @@ class ClusterController extends Controller
                 }
             }
 
-            // Create Employees (RT, RW, ADMIN)
+            // Create Employees (RT, RW, ADMIN) - Manual Input
             if (!empty($validated['employees'])) {
                 foreach ($validated['employees'] as $employee) {
                     // Create user first
@@ -177,6 +183,7 @@ class ClusterController extends Controller
                         'role' => $employee['role'],
                         'status' => 'VERIFIED',
                         'active_flag' => true,
+                        'created_id' => Auth::id(),
                     ]);
 
                     // Link to cluster
@@ -188,7 +195,24 @@ class ClusterController extends Controller
                 }
             }
 
-            // Create Securities
+            // Process Employees CSV Import
+            $employeesImported = 0;
+            $employeesErrors = [];
+
+            if (!empty($validated['employees_csv_data'])) {
+                $csvData = json_decode($validated['employees_csv_data'], true);
+
+                foreach ($csvData as $index => $employeeData) {
+                    try {
+                        $this->processEmployeeImport($cluster->id, $employeeData, Auth::id());
+                        $employeesImported++;
+                    } catch (\Exception $e) {
+                        $employeesErrors[] = "Baris " . ($index + 2) . ": " . $e->getMessage();
+                    }
+                }
+            }
+
+            // Create Securities - Manual Input
             if (!empty($validated['securities'])) {
                 foreach ($validated['securities'] as $security) {
                     // Create user first
@@ -201,6 +225,7 @@ class ClusterController extends Controller
                         'role' => 'SECURITY',
                         'status' => 'VERIFIED',
                         'active_flag' => true,
+                        'created_id' => Auth::id(),
                     ]);
 
                     // Link to cluster
@@ -209,6 +234,23 @@ class ClusterController extends Controller
                         'security_id' => $user->id,
                         'created_id' => Auth::id(),
                     ]);
+                }
+            }
+
+            // Process Securities CSV Import
+            $securitiesImported = 0;
+            $securitiesErrors = [];
+
+            if (!empty($validated['securities_csv_data'])) {
+                $csvData = json_decode($validated['securities_csv_data'], true);
+
+                foreach ($csvData as $index => $securityData) {
+                    try {
+                        $this->processSecurityImport($cluster->id, $securityData, Auth::id());
+                        $securitiesImported++;
+                    } catch (\Exception $e) {
+                        $securitiesErrors[] = "Baris " . ($index + 2) . ": " . $e->getMessage();
+                    }
                 }
             }
 
@@ -422,6 +464,121 @@ class ClusterController extends Controller
         ClusterResident::create([
             'ihm_m_clusters_id' => $clusterId,
             'resident_id' => $resident->id,
+            'created_id' => $createdById,
+        ]);
+    }
+
+    /**
+     * Process single employee import from CSV
+     * 
+     * @param int $clusterId
+     * @param array $data
+     * @param int $createdById
+     * @return void
+     * @throws \Exception
+     */
+    private function processEmployeeImport($clusterId, $data, $createdById)
+    {
+        $username = trim($data['username']);
+        $name = trim($data['name']);
+        $email = !empty($data['email']) ? trim($data['email']) : null;
+        $phone = !empty($data['phone']) ? trim($data['phone']) : null;
+        $role = trim($data['role']);
+        $password = trim($data['password']);
+
+        // Check if user already exists by username
+        $existingUser = User::where('username', $username)->first();
+
+        if ($existingUser) {
+            // User exists, use existing user_id
+            $userId = $existingUser->id;
+
+            // Check if already assigned to this cluster
+            $existingEmployee = ClusterEmployee::where('ihm_m_clusters_id', $clusterId)
+                ->where('employee_id', $userId)
+                ->whereNull('deleted_at')
+                ->first();
+
+            if ($existingEmployee) {
+                throw new \Exception("User {$username} sudah terdaftar sebagai karyawan di cluster ini");
+            }
+        } else {
+            // Create new user with specified role
+            $newUser = User::create([
+                'name' => $name,
+                'username' => $username,
+                'email' => $email,
+                'phone' => $phone,
+                'password' => Hash::make($password),
+                'role' => $role, // RT, RW, ADMIN
+                'status' => 'VERIFIED',
+                'active_flag' => true,
+                'created_id' => $createdById,
+            ]);
+            $userId = $newUser->id;
+        }
+
+        // Create cluster_d_employee link
+        ClusterEmployee::create([
+            'ihm_m_clusters_id' => $clusterId,
+            'employee_id' => $userId,
+            'created_id' => $createdById,
+        ]);
+    }
+
+    /**
+     * Process single security import from CSV
+     * 
+     * @param int $clusterId
+     * @param array $data
+     * @param int $createdById
+     * @return void
+     * @throws \Exception
+     */
+    private function processSecurityImport($clusterId, $data, $createdById)
+    {
+        $username = trim($data['username']);
+        $name = trim($data['name']);
+        $email = !empty($data['email']) ? trim($data['email']) : null;
+        $phone = !empty($data['phone']) ? trim($data['phone']) : null;
+        $password = trim($data['password']);
+
+        // Check if user already exists by username
+        $existingUser = User::where('username', $username)->first();
+
+        if ($existingUser) {
+            // User exists, use existing user_id
+            $userId = $existingUser->id;
+
+            // Check if already assigned to this cluster
+            $existingSecurity = ClusterSecurity::where('ihm_m_clusters_id', $clusterId)
+                ->where('security_id', $userId)
+                ->whereNull('deleted_at')
+                ->first();
+
+            if ($existingSecurity) {
+                throw new \Exception("User {$username} sudah terdaftar sebagai security di cluster ini");
+            }
+        } else {
+            // Create new user with SECURITY role
+            $newUser = User::create([
+                'name' => $name,
+                'username' => $username,
+                'email' => $email,
+                'phone' => $phone,
+                'password' => Hash::make($password),
+                'role' => 'SECURITY',
+                'status' => 'VERIFIED',
+                'active_flag' => true,
+                'created_id' => $createdById,
+            ]);
+            $userId = $newUser->id;
+        }
+
+        // Create cluster_d_security link
+        ClusterSecurity::create([
+            'ihm_m_clusters_id' => $clusterId,
+            'security_id' => $userId,
             'created_id' => $createdById,
         ]);
     }

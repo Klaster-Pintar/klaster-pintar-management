@@ -1,0 +1,84 @@
+⚠️ INSTRUKSI IMPLEMENTASI CSV UPLOAD UNTUK EMPLOYEES & SECURITIES ⚠️
+
+Karena file view cukup besar, berikut adalah langkah-langkah manual yang harus dilakukan:
+
+═══════════════════════════════════════════════════════════════════════════
+LANGKAH 1: UPDATE STEP 4 - EMPLOYEES (File sudah di-backup)
+═══════════════════════════════════════════════════════════════════════════
+
+File: resources/views/admin/clusters/wizard/steps/step4-employees.blade.php
+
+1. Buka file: step4-employees-NEW-VERSION.blade.php (saya akan generate)
+2. Copy semua content dari file baru
+3. Paste ke step4-employees.blade.php (replace semua)
+
+Atau gunakan command:
+```powershell
+Copy-Item "step4-employees-NEW-VERSION.blade.php" "step4-employees.blade.php" -Force
+```
+
+═══════════════════════════════════════════════════════════════════════════
+LANGKAH 2: UPDATE STEP 5 - SECURITIES
+═══════════════════════════════════════════════════════════════════════════
+
+File: resources/views/admin/clusters/wizard/steps/step5-securities.blade.php
+
+1. Buka file: step5-securities-NEW-VERSION.blade.php (saya akan generate)
+2. Copy semua content dari file baru
+3. Paste ke step5-securities.blade.php (replace semua)
+
+═══════════════════════════════════════════════════════════════════════════
+LANGKAH 3: UPDATE ALPINE.JS FUNCTIONS
+═══════════════════════════════════════════════════════════════════════════
+
+File: resources/views/admin/clusters/wizard/index.blade.php
+
+Cari function clusterWizard() dan tambahkan state variables berikut:
+
+AFTER LINE: csvValidationErrors: [],
+
+ADD:
+```javascript
+// Employee CSV state
+employeeInputMode: 'manual',
+employeeCsvFileName: '',
+employeeCsvPreviewData: [],
+employeeCsvValidCount: 0,
+employeeCsvErrorCount: 0,
+employeeCsvValidationErrors: [],
+
+// Security CSV state
+securityInputMode: 'manual',
+securityCsvFileName: '',
+securityCsvPreviewData: [],
+securityCsvValidCount: 0,
+securityCsvErrorCount: 0,
+securityCsvValidationErrors: [],
+```
+
+Kemudian tambahkan 12 functions baru (saya akan generate di file terpisah)
+
+═══════════════════════════════════════════════════════════════════════════
+LANGKAH 4: UPDATE CONTROLLER
+═══════════════════════════════════════════════════════════════════════════
+
+File: app/Http/Controllers/Admin/ClusterController.php
+
+1. Update validation rules
+2. Tambahkan process employees CSV
+3. Tambahkan process securities CSV
+4. Tambahkan 2 private methods baru
+
+(Detail code saya generate di file terpisah)
+
+═══════════════════════════════════════════════════════════════════════════
+FILES YANG AKAN DI-GENERATE:
+═══════════════════════════════════════════════════════════════════════════
+
+✅ CSV_EMPLOYEES_SECURITIES_GUIDE.md (DONE)
+⏳ step4-employees-NEW-VERSION.blade.php (NEXT)
+⏳ step5-securities-NEW-VERSION.blade.php (NEXT)
+⏳ alpine-functions-employees-securities.js (NEXT)
+⏳ controller-updates.php (NEXT)
+
+═══════════════════════════════════════════════════════════════════════════

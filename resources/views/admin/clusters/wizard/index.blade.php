@@ -325,6 +325,22 @@
                 csvErrorCount: 0,
                 csvValidationErrors: [],
 
+                // CSV Upload - Step 4 (Employees)
+                employeeInputMode: 'manual',
+                employeeCsvFileName: '',
+                employeeCsvPreviewData: [],
+                employeeCsvValidCount: 0,
+                employeeCsvErrorCount: 0,
+                employeeCsvValidationErrors: [],
+
+                // CSV Upload - Step 5 (Securities)
+                securityInputMode: 'manual',
+                securityCsvFileName: '',
+                securityCsvPreviewData: [],
+                securityCsvValidCount: 0,
+                securityCsvErrorCount: 0,
+                securityCsvValidationErrors: [],
+
                 init() {
                     console.log('Wizard initialized');
 
@@ -896,6 +912,296 @@
                     if (!amount) return 'Rp 0';
                     const number = parseInt(amount.toString().replace(/[^0-9]/g, ''));
                     return 'Rp ' + number.toLocaleString('id-ID');
+                },
+
+                // ============================================
+                // EMPLOYEE CSV FUNCTIONS
+                // ============================================
+                downloadEmployeeCsvTemplate() {
+                    const csvContent = [
+                        ['Nama', 'Username', 'Email', 'Phone', 'Role', 'Password'],
+                        ['Ahmad Sulaiman', 'ahmad.rt01', 'ahmad@example.com', '081234567890', 'RT', 'password123'],
+                        ['Budi Santoso', 'budi.rw02', 'budi@example.com', '081234567891', 'RW', 'password123'],
+                        ['Citra Admin', 'citra.admin', 'citra@example.com', '081234567892', 'ADMIN', 'password123']
+                    ].map(row => row.join(',')).join('\n');
+
+                    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                    const link = document.createElement('a');
+                    const url = URL.createObjectURL(blob);
+                    link.setAttribute('href', url);
+                    link.setAttribute('download', 'template_employees.csv');
+                    link.style.visibility = 'hidden';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                },
+
+                handleEmployeeCsvUpload(event) {
+                    const file = event.target.files[0];
+                    if (!file) return;
+
+                    if (file.size > 2 * 1024 * 1024) {
+                        alert('File terlalu besar. Maksimal 2MB');
+                        return;
+                    }
+
+                    if (!file.name.endsWith('.csv')) {
+                        alert('Hanya file CSV yang diizinkan');
+                        return;
+                    }
+
+                    this.employeeCsvFileName = file.name;
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        try {
+                            this.parseEmployeeCsvData(e.target.result);
+                        } catch (error) {
+                            alert('Error parsing CSV: ' + error.message);
+                            this.clearEmployeeCsvData();
+                        }
+                    };
+                    reader.readAsText(file);
+                },
+
+                parseEmployeeCsvData(csvText) {
+                    csvText = csvText.replace(/^\ufeff/, '');
+                    const lines = csvText.split(/\r?\n/).filter(line => line.trim());
+
+                    if (lines.length < 2) {
+                        throw new Error('File CSV kosong atau tidak valid');
+                    }
+
+                    const dataLines = lines.slice(1);
+                    this.employeeCsvPreviewData = dataLines.map((line, index) => {
+                        const columns = this.parseCsvLine(line);
+
+                        if (columns.length < 6) {
+                            return {
+                                name: columns[0] || '',
+                                username: columns[1] || '',
+                                email: columns[2] || '',
+                                phone: columns[3] || '',
+                                role: columns[4] || '',
+                                password: columns[5] || '',
+                                isValid: false,
+                                error: 'Kolom tidak lengkap (minimal 6 kolom)'
+                            };
+                        }
+
+                        return {
+                            name: columns[0].trim(),
+                            username: columns[1].trim(),
+                            email: columns[2].trim(),
+                            phone: columns[3].trim(),
+                            role: columns[4].trim(),
+                            password: columns[5].trim(),
+                            isValid: true,
+                            error: ''
+                        };
+                    });
+
+                    this.validateEmployeeCsvData();
+                },
+
+                validateEmployeeCsvData() {
+                    this.employeeCsvValidationErrors = [];
+                    const usernames = new Set();
+
+                    this.employeeCsvPreviewData.forEach((row, index) => {
+                        const errors = [];
+
+                        if (!row.name) errors.push(`Baris ${index + 2}: Nama wajib diisi`);
+                        if (!row.username) {
+                            errors.push(`Baris ${index + 2}: Username wajib diisi`);
+                        } else {
+                            if (usernames.has(row.username)) {
+                                errors.push(`Baris ${index + 2}: Username ${row.username} duplikat dalam file CSV`);
+                            }
+                            usernames.add(row.username);
+                        }
+
+                        if (!row.role) {
+                            errors.push(`Baris ${index + 2}: Role wajib diisi`);
+                        } else if (!['RT', 'RW', 'ADMIN'].includes(row.role)) {
+                            errors.push(`Baris ${index + 2}: Role harus RT, RW, atau ADMIN`);
+                        }
+
+                        if (!row.password) {
+                            errors.push(`Baris ${index + 2}: Password wajib diisi`);
+                        } else if (row.password.length < 8) {
+                            errors.push(`Baris ${index + 2}: Password minimal 8 karakter`);
+                        }
+
+                        if (row.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(row.email)) {
+                            errors.push(`Baris ${index + 2}: Format email tidak valid`);
+                        }
+
+                        if (row.phone && !/^\d+$/.test(row.phone)) {
+                            errors.push(`Baris ${index + 2}: No HP harus berisi angka saja`);
+                        }
+
+                        if (errors.length > 0) {
+                            row.isValid = false;
+                            row.error = errors.join('; ');
+                            this.employeeCsvValidationErrors.push(...errors);
+                        } else {
+                            row.isValid = true;
+                            row.error = '';
+                        }
+                    });
+
+                    this.employeeCsvValidCount = this.employeeCsvPreviewData.filter(r => r.isValid).length;
+                    this.employeeCsvErrorCount = this.employeeCsvPreviewData.filter(r => !r.isValid).length;
+                },
+
+                clearEmployeeCsvData() {
+                    this.employeeCsvFileName = '';
+                    this.employeeCsvPreviewData = [];
+                    this.employeeCsvValidCount = 0;
+                    this.employeeCsvErrorCount = 0;
+                    this.employeeCsvValidationErrors = [];
+                    document.getElementById('employeeCsvFileInput').value = '';
+                },
+
+                // ============================================
+                // SECURITY CSV FUNCTIONS
+                // ============================================
+                downloadSecurityCsvTemplate() {
+                    const csvContent = [
+                        ['Nama', 'Username', 'Email', 'Phone', 'Password'],
+                        ['Eko Prasetyo', 'eko.security01', 'eko@example.com', '081234567893', 'password123'],
+                        ['Fajar Hidayat', 'fajar.security02', 'fajar@example.com', '081234567894', 'password123'],
+                        ['Gunawan', 'gunawan.security03', 'gunawan@example.com', '081234567895', 'password123']
+                    ].map(row => row.join(',')).join('\n');
+
+                    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                    const link = document.createElement('a');
+                    const url = URL.createObjectURL(blob);
+                    link.setAttribute('href', url);
+                    link.setAttribute('download', 'template_securities.csv');
+                    link.style.visibility = 'hidden';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                },
+
+                handleSecurityCsvUpload(event) {
+                    const file = event.target.files[0];
+                    if (!file) return;
+
+                    if (file.size > 2 * 1024 * 1024) {
+                        alert('File terlalu besar. Maksimal 2MB');
+                        return;
+                    }
+
+                    if (!file.name.endsWith('.csv')) {
+                        alert('Hanya file CSV yang diizinkan');
+                        return;
+                    }
+
+                    this.securityCsvFileName = file.name;
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        try {
+                            this.parseSecurityCsvData(e.target.result);
+                        } catch (error) {
+                            alert('Error parsing CSV: ' + error.message);
+                            this.clearSecurityCsvData();
+                        }
+                    };
+                    reader.readAsText(file);
+                },
+
+                parseSecurityCsvData(csvText) {
+                    csvText = csvText.replace(/^\ufeff/, '');
+                    const lines = csvText.split(/\r?\n/).filter(line => line.trim());
+
+                    if (lines.length < 2) {
+                        throw new Error('File CSV kosong atau tidak valid');
+                    }
+
+                    const dataLines = lines.slice(1);
+                    this.securityCsvPreviewData = dataLines.map((line, index) => {
+                        const columns = this.parseCsvLine(line);
+
+                        if (columns.length < 5) {
+                            return {
+                                name: columns[0] || '',
+                                username: columns[1] || '',
+                                email: columns[2] || '',
+                                phone: columns[3] || '',
+                                password: columns[4] || '',
+                                isValid: false,
+                                error: 'Kolom tidak lengkap (minimal 5 kolom)'
+                            };
+                        }
+
+                        return {
+                            name: columns[0].trim(),
+                            username: columns[1].trim(),
+                            email: columns[2].trim(),
+                            phone: columns[3].trim(),
+                            password: columns[4].trim(),
+                            isValid: true,
+                            error: ''
+                        };
+                    });
+
+                    this.validateSecurityCsvData();
+                },
+
+                validateSecurityCsvData() {
+                    this.securityCsvValidationErrors = [];
+                    const usernames = new Set();
+
+                    this.securityCsvPreviewData.forEach((row, index) => {
+                        const errors = [];
+
+                        if (!row.name) errors.push(`Baris ${index + 2}: Nama wajib diisi`);
+                        if (!row.username) {
+                            errors.push(`Baris ${index + 2}: Username wajib diisi`);
+                        } else {
+                            if (usernames.has(row.username)) {
+                                errors.push(`Baris ${index + 2}: Username ${row.username} duplikat dalam file CSV`);
+                            }
+                            usernames.add(row.username);
+                        }
+
+                        if (!row.password) {
+                            errors.push(`Baris ${index + 2}: Password wajib diisi`);
+                        } else if (row.password.length < 8) {
+                            errors.push(`Baris ${index + 2}: Password minimal 8 karakter`);
+                        }
+
+                        if (row.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(row.email)) {
+                            errors.push(`Baris ${index + 2}: Format email tidak valid`);
+                        }
+
+                        if (row.phone && !/^\d+$/.test(row.phone)) {
+                            errors.push(`Baris ${index + 2}: No HP harus berisi angka saja`);
+                        }
+
+                        if (errors.length > 0) {
+                            row.isValid = false;
+                            row.error = errors.join('; ');
+                            this.securityCsvValidationErrors.push(...errors);
+                        } else {
+                            row.isValid = true;
+                            row.error = '';
+                        }
+                    });
+
+                    this.securityCsvValidCount = this.securityCsvPreviewData.filter(r => r.isValid).length;
+                    this.securityCsvErrorCount = this.securityCsvPreviewData.filter(r => !r.isValid).length;
+                },
+
+                clearSecurityCsvData() {
+                    this.securityCsvFileName = '';
+                    this.securityCsvPreviewData = [];
+                    this.securityCsvValidCount = 0;
+                    this.securityCsvErrorCount = 0;
+                    this.securityCsvValidationErrors = [];
+                    document.getElementById('securityCsvFileInput').value = '';
                 },
 
                 submitForm() {

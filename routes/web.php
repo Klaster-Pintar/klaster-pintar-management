@@ -7,6 +7,8 @@ use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\ProfileController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\ClusterController;
+use App\Http\Controllers\Admin\FinanceSettlementController;
+use App\Http\Controllers\Admin\ClusterSubscriptionController;
 
 Route::get('/', function () {
     if (Auth::check()) {
@@ -40,6 +42,20 @@ Route::middleware('auth')->group(function () {
 
         // Cluster Management Routes
         Route::resource('clusters', ClusterController::class);
+
+        // Finance Management Routes
+        Route::prefix('finance')->name('finance.')->group(function () {
+            // Cluster Subscription Routes
+            Route::get('/subscription', [ClusterSubscriptionController::class, 'index'])->name('subscription.index');
+            Route::get('/subscription/{id}', [ClusterSubscriptionController::class, 'show'])->name('subscription.show');
+            Route::post('/subscription/{id}', [ClusterSubscriptionController::class, 'update'])->name('subscription.update');
+
+            // Settlement Routes (Penarikan & Setoran)
+            Route::get('/settlement', [FinanceSettlementController::class, 'index'])->name('settlement.index');
+            Route::get('/settlement/{id}', [FinanceSettlementController::class, 'show'])->name('settlement.show');
+            Route::post('/settlement/{id}/approve', [FinanceSettlementController::class, 'approve'])->name('settlement.approve');
+            Route::post('/settlement/{id}/reject', [FinanceSettlementController::class, 'reject'])->name('settlement.reject');
+        });
     });
 });
 
