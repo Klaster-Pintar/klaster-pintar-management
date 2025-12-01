@@ -35,6 +35,43 @@
             border: 2px solid #e5e7eb;
             color: #9ca3af;
         }
+
+        /* Google Maps Styles */
+        .map-container {
+            height: 500px;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .pac-container {
+            border-radius: 8px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            margin-top: 4px;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        .pac-item {
+            padding: 10px;
+            cursor: pointer;
+        }
+
+        .pac-item:hover {
+            background-color: #f3f4f6;
+        }
+
+        .marker-info-window {
+            font-family: 'Poppins', sans-serif;
+        }
+
+        .marker-info-window h4 {
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .marker-info-window button {
+            margin-top: 8px;
+        }
     </style>
 @endpush
 
@@ -69,8 +106,32 @@
 
                     <!-- Progress Indicator -->
                     <div class="bg-white rounded-xl shadow-lg p-6 lg:p-8 mb-6">
+                        <!-- Navigation Buttons - Header -->
+                        <div class="flex items-center justify-between mb-6 pb-4 border-b border-gray-200">
+                            <button type="button" @click="previousStep" x-show="currentStep > 1"
+                                class="px-6 py-2.5 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition font-semibold">
+                                <i class="fa-solid fa-arrow-left mr-1"></i> Kembali
+                            </button>
+
+                            <div class="flex-1 text-center">
+                                <span class="text-sm font-semibold text-gray-600">
+                                    Step <span x-text="currentStep"></span> dari 7
+                                </span>
+                            </div>
+
+                            <button type="button" @click="nextStep" x-show="currentStep < 7"
+                                class="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:shadow-lg transition font-semibold">
+                                Selanjutnya <i class="fa-solid fa-arrow-right ml-1"></i>
+                            </button>
+
+                            <button type="submit" x-show="currentStep === 7" form="wizard-form"
+                                class="px-6 py-2.5 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg hover:shadow-lg transition font-semibold">
+                                <i class="fa-solid fa-check-circle mr-1"></i> Selesai & Simpan
+                            </button>
+                        </div>
+
                         <div class="step-indicator">
-                            <div class="grid grid-cols-3 lg:grid-cols-6 gap-2 lg:gap-4 relative z-10">
+                            <div class="grid grid-cols-4 lg:grid-cols-7 gap-2 lg:gap-4 relative z-10">
                                 <!-- Step 1 -->
                                 <div class="step-item flex flex-col items-center"
                                     :class="currentStep === 1 ? 'active' : currentStep > 1 ? 'completed' : 'pending'">
@@ -131,12 +192,22 @@
                                     </div>
                                     <span class="text-xs text-center font-medium text-gray-700">Bank</span>
                                 </div>
+
+                                <!-- Step 7 -->
+                                <div class="step-item flex flex-col items-center"
+                                    :class="currentStep === 7 ? 'active' : currentStep > 7 ? 'completed' : 'pending'">
+                                    <div
+                                        class="step-circle w-12 h-12 rounded-full flex items-center justify-center font-bold text-sm mb-2 transition-all">
+                                        <i class="fa-solid" :class="currentStep > 7 ? 'fa-check' : 'fa-users'"></i>
+                                    </div>
+                                    <span class="text-xs text-center font-medium text-gray-700">Residents</span>
+                                </div>
                             </div>
                         </div>
                     </div>
 
                     <!-- Form Container -->
-                    <form @submit.prevent="submitForm" enctype="multipart/form-data">
+                    <form id="wizard-form" @submit.prevent="submitForm" enctype="multipart/form-data">
                         @csrf
 
                         <!-- Step 1: Basic Information -->
@@ -169,26 +240,9 @@
                             @include('admin.clusters.wizard.steps.step6-banks')
                         </div>
 
-                        <!-- Navigation Buttons -->
-                        <div class="bg-white rounded-xl shadow-lg p-4 lg:p-6 mt-6">
-                            <div class="flex items-center justify-between">
-                                <button type="button" @click="previousStep" x-show="currentStep > 1"
-                                    class="px-6 py-2.5 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition font-semibold">
-                                    <i class="fa-solid fa-arrow-left mr-1"></i> Kembali
-                                </button>
-
-                                <div class="flex-1"></div>
-
-                                <button type="button" @click="nextStep" x-show="currentStep < 6"
-                                    class="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:shadow-lg transition font-semibold">
-                                    Selanjutnya <i class="fa-solid fa-arrow-right ml-1"></i>
-                                </button>
-
-                                <button type="submit" x-show="currentStep === 6"
-                                    class="px-6 py-2.5 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg hover:shadow-lg transition font-semibold">
-                                    <i class="fa-solid fa-check-circle mr-1"></i> Selesai & Simpan
-                                </button>
-                            </div>
+                        <!-- Step 7: Residents -->
+                        <div x-show="currentStep === 7" x-transition class="bg-white rounded-xl shadow-lg p-6 lg:p-8">
+                            @include('admin.clusters.wizard.steps.step7-residents')
                         </div>
                     </form>
 
@@ -199,7 +253,24 @@
 @endsection
 
 @push('scripts')
+    <!-- Google Maps API -->
     <script>
+        // Global variable for Google Maps API Key
+        const GOOGLE_MAPS_API_KEY = '{{ env('GOOGLE_MAPS_API_KEY', '') }}';
+    </script>
+    <script async defer
+        src="https://maps.googleapis.com/maps/api/js?key={{ env('GOOGLE_MAPS_API_KEY', '') }}&libraries=places&callback=initGoogleMaps">
+        </script>
+
+    <script>
+        // Global Google Maps initialization callback
+        let googleMapsReady = false;
+        window.initGoogleMaps = function () {
+            googleMapsReady = true;
+            console.log('Google Maps API loaded successfully');
+            window.dispatchEvent(new Event('google-maps-ready'));
+        };
+
         function clusterWizard() {
             return {
                 currentStep: 1,
@@ -215,9 +286,7 @@
                     radius_patrol: 5,
 
                     // Step 2
-                    offices: [
-                        { name: '', type_id: 1, latitude: '', longitude: '' }
-                    ],
+                    offices: [],
 
                     // Step 3
                     patrols: [
@@ -233,13 +302,352 @@
                     // Step 6
                     bank_accounts: [
                         { account_number: '', account_holder: '', bank_type: 'BCA', bank_code_id: 1 }
-                    ]
+                    ],
+
+                    // Step 7
+                    residents: []
                 },
+
+                // Google Maps - Step 2 (Offices)
+                officeMap: null,
+                officeMarkers: [],
+                officeSearchBox: null,
+
+                // Google Maps - Step 3 (Patrols)
+                patrolMap: null,
+                patrolMarkers: [],
+                currentPatrolIndex: 0,
+
+                // CSV Upload - Step 7 (Residents)
+                csvFileName: '',
+                csvPreviewData: [],
+                csvValidCount: 0,
+                csvErrorCount: 0,
+                csvValidationErrors: [],
 
                 init() {
                     console.log('Wizard initialized');
+
+                    // Wait for Google Maps to be ready
+                    if (googleMapsReady) {
+                        this.initializeMaps();
+                    } else {
+                        window.addEventListener('google-maps-ready', () => {
+                            this.initializeMaps();
+                        });
+                    }
+
+                    // Watch for step changes to initialize maps
+                    this.$watch('currentStep', (value) => {
+                        if (value === 2 && !this.officeMap && googleMapsReady) {
+                            setTimeout(() => this.initOfficeMap(), 100);
+                        }
+                        if (value === 3 && !this.patrolMap && googleMapsReady) {
+                            setTimeout(() => this.initPatrolMap(), 100);
+                        }
+                    });
                 },
 
+                initializeMaps() {
+                    console.log('Initializing maps...');
+                },
+
+                // ============================================
+                // STEP 2: OFFICE MAP FUNCTIONS
+                // ============================================
+                initOfficeMap() {
+                    const mapElement = document.getElementById('officeMap');
+                    const searchInput = document.getElementById('officeSearchInput');
+
+                    if (!mapElement || !searchInput) {
+                        console.error('Office map elements not found');
+                        return;
+                    }
+
+                    // Default center: Jakarta
+                    const defaultCenter = { lat: -6.200000, lng: 106.816666 };
+
+                    this.officeMap = new google.maps.Map(mapElement, {
+                        center: defaultCenter,
+                        zoom: 13,
+                        mapTypeControl: true,
+                        streetViewControl: false,
+                        fullscreenControl: true,
+                        styles: [
+                            {
+                                featureType: 'poi',
+                                elementType: 'labels',
+                                stylers: [{ visibility: 'on' }]
+                            }
+                        ]
+                    });
+
+                    // Initialize search box
+                    this.officeSearchBox = new google.maps.places.SearchBox(searchInput);
+                    this.officeMap.controls[google.maps.ControlPosition.TOP_LEFT].push(searchInput);
+
+                    // Bias search results to map viewport
+                    this.officeMap.addListener('bounds_changed', () => {
+                        this.officeSearchBox.setBounds(this.officeMap.getBounds());
+                    });
+
+                    // Listen for search box selection
+                    this.officeSearchBox.addListener('places_changed', () => {
+                        const places = this.officeSearchBox.getPlaces();
+                        if (places.length === 0) return;
+
+                        const place = places[0];
+                        if (!place.geometry || !place.geometry.location) return;
+
+                        // Add marker at searched location
+                        this.addOfficeMarker(
+                            place.geometry.location.lat(),
+                            place.geometry.location.lng(),
+                            place.name || 'Office Location'
+                        );
+
+                        // Pan to location
+                        this.officeMap.setCenter(place.geometry.location);
+                        this.officeMap.setZoom(17);
+                    });
+
+                    // Click to add marker
+                    this.officeMap.addListener('click', (e) => {
+                        this.addOfficeMarker(
+                            e.latLng.lat(),
+                            e.latLng.lng(),
+                            `Office ${this.formData.offices.length + 1}`
+                        );
+                    });
+
+                    console.log('Office map initialized');
+                },
+
+                addOfficeMarker(lat, lng, name = '') {
+                    const marker = new google.maps.Marker({
+                        position: { lat, lng },
+                        map: this.officeMap,
+                        draggable: true,
+                        animation: google.maps.Animation.DROP,
+                        icon: {
+                            url: 'http://maps.google.com/mapfiles/ms/icons/green-dot.png',
+                            scaledSize: new google.maps.Size(40, 40)
+                        }
+                    });
+
+                    const officeIndex = this.formData.offices.length;
+
+                    // Add to offices array
+                    this.formData.offices.push({
+                        name: name,
+                        type_id: 1,
+                        latitude: lat.toFixed(7),
+                        longitude: lng.toFixed(7)
+                    });
+
+                    // Store marker reference
+                    this.officeMarkers.push({
+                        marker: marker,
+                        index: officeIndex
+                    });
+
+                    // Info window
+                    const infoWindow = new google.maps.InfoWindow({
+                        content: this.getOfficeInfoWindowContent(officeIndex, lat, lng)
+                    });
+
+                    marker.addListener('click', () => {
+                        infoWindow.open(this.officeMap, marker);
+                    });
+
+                    // Update coordinates when dragged
+                    marker.addListener('dragend', (e) => {
+                        const newLat = e.latLng.lat();
+                        const newLng = e.latLng.lng();
+                        this.formData.offices[officeIndex].latitude = newLat.toFixed(7);
+                        this.formData.offices[officeIndex].longitude = newLng.toFixed(7);
+                        infoWindow.setContent(this.getOfficeInfoWindowContent(officeIndex, newLat, newLng));
+                    });
+                },
+
+                getOfficeInfoWindowContent(index, lat, lng) {
+                    return `
+                                            <div class="marker-info-window" style="min-width: 200px;">
+                                                <h4 class="text-sm font-bold text-gray-800">Office ${index + 1}</h4>
+                                                <p class="text-xs text-gray-600 mt-1">
+                                                    Lat: ${lat.toFixed(7)}<br>
+                                                    Lng: ${lng.toFixed(7)}
+                                                </p>
+                                                <button onclick="window.clusterWizardInstance.deleteOfficeMarker(${index})" 
+                                                    class="mt-2 px-3 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600 transition">
+                                                    <i class="fa-solid fa-trash mr-1"></i> Hapus
+                                                </button>
+                                            </div>
+                                        `;
+                },
+
+                deleteOfficeMarker(index) {
+                    // Find marker with this index
+                    const markerObj = this.officeMarkers.find(m => m.index === index);
+                    if (markerObj) {
+                        markerObj.marker.setMap(null);
+                        this.officeMarkers = this.officeMarkers.filter(m => m.index !== index);
+                    }
+
+                    // Remove from offices array
+                    this.formData.offices.splice(index, 1);
+
+                    // Update remaining markers' indices
+                    this.officeMarkers.forEach((m, i) => {
+                        if (m.index > index) {
+                            m.index--;
+                        }
+                    });
+                },
+
+                clearAllOfficeMarkers() {
+                    if (confirm('Hapus semua marker kantor?')) {
+                        this.officeMarkers.forEach(m => m.marker.setMap(null));
+                        this.officeMarkers = [];
+                        this.formData.offices = [];
+                    }
+                },
+
+                // ============================================
+                // STEP 3: PATROL MAP FUNCTIONS
+                // ============================================
+                initPatrolMap() {
+                    const mapElement = document.getElementById('patrolMap');
+                    if (!mapElement) {
+                        console.error('Patrol map element not found');
+                        return;
+                    }
+
+                    const defaultCenter = { lat: -6.200000, lng: 106.816666 };
+
+                    this.patrolMap = new google.maps.Map(mapElement, {
+                        center: defaultCenter,
+                        zoom: 13,
+                        mapTypeControl: true,
+                        streetViewControl: false,
+                        fullscreenControl: true
+                    });
+
+                    // Click to add patrol marker
+                    this.patrolMap.addListener('click', (e) => {
+                        this.addPatrolMarker(e.latLng.lat(), e.latLng.lng());
+                    });
+
+                    console.log('Patrol map initialized');
+                },
+
+                addPatrolMarker(lat, lng) {
+                    const markerIndex = this.patrolMarkers.length;
+                    const markerLabel = String(markerIndex + 1);
+
+                    const marker = new google.maps.Marker({
+                        position: { lat, lng },
+                        map: this.patrolMap,
+                        draggable: true,
+                        animation: google.maps.Animation.DROP,
+                        label: {
+                            text: markerLabel,
+                            color: 'white',
+                            fontWeight: 'bold'
+                        },
+                        icon: {
+                            url: 'http://maps.google.com/mapfiles/ms/icons/orange-dot.png',
+                            scaledSize: new google.maps.Size(40, 40)
+                        }
+                    });
+
+                    // Store marker
+                    this.patrolMarkers.push({
+                        marker: marker,
+                        lat: lat,
+                        lng: lng
+                    });
+
+                    // Update formData
+                    this.updatePatrolPinpoints();
+
+                    // Info window
+                    const infoWindow = new google.maps.InfoWindow({
+                        content: this.getPatrolInfoWindowContent(markerIndex, lat, lng)
+                    });
+
+                    marker.addListener('click', () => {
+                        infoWindow.open(this.patrolMap, marker);
+                    });
+
+                    // Update on drag
+                    marker.addListener('dragend', (e) => {
+                        const newLat = e.latLng.lat();
+                        const newLng = e.latLng.lng();
+                        this.patrolMarkers[markerIndex].lat = newLat;
+                        this.patrolMarkers[markerIndex].lng = newLng;
+                        this.updatePatrolPinpoints();
+                        infoWindow.setContent(this.getPatrolInfoWindowContent(markerIndex, newLat, newLng));
+                    });
+                },
+
+                getPatrolInfoWindowContent(index, lat, lng) {
+                    return `
+                                            <div class="marker-info-window" style="min-width: 200px;">
+                                                <h4 class="text-sm font-bold text-gray-800">Patrol Point ${index + 1}</h4>
+                                                <p class="text-xs text-gray-600 mt-1">
+                                                    Lat: ${lat.toFixed(7)}<br>
+                                                    Lng: ${lng.toFixed(7)}
+                                                </p>
+                                                <button onclick="window.clusterWizardInstance.deletePatrolMarker(${index})" 
+                                                    class="mt-2 px-3 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600 transition">
+                                                    <i class="fa-solid fa-trash mr-1"></i> Hapus
+                                                </button>
+                                            </div>
+                                        `;
+                },
+
+                deletePatrolMarker(index) {
+                    // Remove marker from map
+                    if (this.patrolMarkers[index]) {
+                        this.patrolMarkers[index].marker.setMap(null);
+                        this.patrolMarkers.splice(index, 1);
+                    }
+
+                    // Re-label remaining markers
+                    this.patrolMarkers.forEach((m, i) => {
+                        m.marker.setLabel({
+                            text: String(i + 1),
+                            color: 'white',
+                            fontWeight: 'bold'
+                        });
+                    });
+
+                    this.updatePatrolPinpoints();
+                },
+
+                clearAllPatrolMarkers() {
+                    if (confirm('Hapus semua marker patroli?')) {
+                        this.patrolMarkers.forEach(m => m.marker.setMap(null));
+                        this.patrolMarkers = [];
+                        this.updatePatrolPinpoints();
+                    }
+                },
+
+                updatePatrolPinpoints() {
+                    const pinpoints = this.patrolMarkers.map(m => ({
+                        lat: m.lat.toFixed(7),
+                        lng: m.lng.toFixed(7)
+                    }));
+
+                    if (this.formData.patrols[this.currentPatrolIndex]) {
+                        this.formData.patrols[this.currentPatrolIndex].pinpoints = pinpoints;
+                    }
+                },
+
+                // ============================================
+                // GENERAL FUNCTIONS
+                // ============================================
                 nextStep() {
                     if (this.validateCurrentStep()) {
                         this.currentStep++;
@@ -289,11 +697,226 @@
                     this.formData.bank_accounts.splice(index, 1);
                 },
 
+                // ============================================
+                // STEP 7: CSV RESIDENTS FUNCTIONS
+                // ============================================
+                downloadCsvTemplate() {
+                    const csvContent = [
+                        ['Nama', 'No HP', 'Blok', 'Nomor', 'Status Rumah', 'Status User', 'Nominal IPL'],
+                        ['John Doe', '081234567890', 'A', '01', 'HUNI', 'Active', '500000'],
+                        ['Jane Smith', '081234567891', 'A', '02', 'KOSONG', 'Active', '500000'],
+                        ['Bob Johnson', '081234567892', 'B', '01', 'HUNI', 'Inactive', '500000']
+                    ].map(row => row.join(',')).join('\n');
+
+                    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                    const link = document.createElement('a');
+                    const url = URL.createObjectURL(blob);
+                    link.setAttribute('href', url);
+                    link.setAttribute('download', 'template_residents.csv');
+                    link.style.visibility = 'hidden';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                },
+
+                handleCsvUpload(event) {
+                    const file = event.target.files[0];
+                    if (!file) return;
+
+                    // Validate file size (max 2MB)
+                    if (file.size > 2 * 1024 * 1024) {
+                        alert('File terlalu besar! Maksimal 2MB');
+                        event.target.value = '';
+                        return;
+                    }
+
+                    // Validate file type
+                    if (!file.name.endsWith('.csv')) {
+                        alert('Format file harus CSV!');
+                        event.target.value = '';
+                        return;
+                    }
+
+                    this.csvFileName = file.name;
+
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        try {
+                            this.parseCsvData(e.target.result);
+                        } catch (error) {
+                            alert('Error parsing CSV: ' + error.message);
+                            this.clearCsvData();
+                        }
+                    };
+                    reader.readAsText(file);
+                },
+
+                parseCsvData(csvText) {
+                    // Remove BOM if present
+                    csvText = csvText.replace(/^\ufeff/, '');
+
+                    // Split by newline and filter empty lines
+                    const lines = csvText.split(/\r?\n/).filter(line => line.trim());
+
+                    if (lines.length < 2) {
+                        throw new Error('File CSV kosong atau tidak valid');
+                    }
+
+                    // Skip header row
+                    const dataLines = lines.slice(1); this.csvPreviewData = dataLines.map((line, index) => {
+                        const columns = this.parseCsvLine(line);
+
+                        if (columns.length < 7) {
+                            return {
+                                name: columns[0] || '',
+                                phone: columns[1] || '',
+                                house_block: columns[2] || '',
+                                house_number: columns[3] || '',
+                                house_status: columns[4] || '',
+                                user_status: columns[5] || '',
+                                nominal_ipl: columns[6] || '0',
+                                isValid: false,
+                                error: 'Kolom tidak lengkap (minimal 7 kolom)'
+                            };
+                        }
+
+                        const row = {
+                            name: columns[0].trim(),
+                            phone: columns[1].trim(),
+                            house_block: columns[2].trim(),
+                            house_number: columns[3].trim(),
+                            house_status: columns[4].trim(),
+                            user_status: columns[5].trim(),
+                            nominal_ipl: columns[6].trim(),
+                            isValid: true,
+                            error: ''
+                        };
+
+                        return row;
+                    });
+
+                    this.validateCsvData();
+                },
+
+                parseCsvLine(line) {
+                    const result = [];
+                    let current = '';
+                    let inQuotes = false;
+
+                    for (let i = 0; i < line.length; i++) {
+                        const char = line[i];
+
+                        if (char === '\"') {
+                            inQuotes = !inQuotes;
+                        } else if (char === ',' && !inQuotes) {
+                            result.push(current);
+                            current = '';
+                        } else {
+                            current += char;
+                        }
+                    }
+                    result.push(current);
+
+                    // Remove quotes and trim whitespace
+                    return result.map(col => col.replace(/^\"|\"$/g, '').trim());
+                }, validateCsvData() {
+                    this.csvValidationErrors = [];
+                    const phoneNumbers = new Set();
+                    const houseAddresses = new Set();
+
+                    this.csvPreviewData.forEach((row, index) => {
+                        const errors = [];
+
+                        // Validate required fields
+                        if (!row.name) errors.push(`Baris ${index + 2}: Nama wajib diisi`);
+                        if (!row.phone) {
+                            errors.push(`Baris ${index + 2}: No HP wajib diisi`);
+                        } else {
+                            // Validate phone format (should be numbers)
+                            if (!/^\d+$/.test(row.phone)) {
+                                errors.push(`Baris ${index + 2}: No HP harus berisi angka saja`);
+                            }
+                            // Check duplicate phone in CSV
+                            if (phoneNumbers.has(row.phone)) {
+                                errors.push(`Baris ${index + 2}: No HP ${row.phone} duplikat dalam file CSV`);
+                            }
+                            phoneNumbers.add(row.phone);
+                        }
+
+                        if (!row.house_block) errors.push(`Baris ${index + 2}: Blok wajib diisi`);
+                        if (!row.house_block) errors.push(`Baris ${index + 2}: Blok wajib diisi`);
+                        if (!row.house_number) errors.push(`Baris ${index + 2}: Nomor wajib diisi`);
+
+                        // Validate house status (accept both old and new format)
+                        if (row.house_status && !['HUNI', 'KOSONG', 'Milik', 'Kontrak'].includes(row.house_status)) {
+                            errors.push(`Baris ${index + 2}: Status Rumah harus \"HUNI\" atau \"KOSONG\"`);
+                        }
+
+                        // Validate user status
+                        if (row.user_status && !['Active', 'Inactive'].includes(row.user_status)) {
+                            errors.push(`Baris ${index + 2}: Status User harus \"Active\" atau \"Inactive\"`);
+                        }
+
+                        // Validate nominal IPL (should be number)
+                        const nominalClean = row.nominal_ipl.toString().replace(/[.,\s]/g, '');
+                        if (row.nominal_ipl && nominalClean && !/^\d+$/.test(nominalClean)) {
+                            errors.push(`Baris ${index + 2}: Nominal IPL harus berupa angka`);
+                        }
+                        // Check duplicate house address
+                        const houseKey = `${row.house_block}-${row.house_number}`;
+                        if (houseAddresses.has(houseKey)) {
+                            errors.push(`Baris ${index + 2}: Alamat ${houseKey} duplikat dalam file CSV`);
+                        }
+                        houseAddresses.add(houseKey);
+
+                        if (errors.length > 0) {
+                            row.isValid = false;
+                            row.error = errors.join('; ');
+                            this.csvValidationErrors.push(...errors);
+                        } else {
+                            row.isValid = true;
+                            row.error = '';
+                        }
+                    });
+
+                    this.csvValidCount = this.csvPreviewData.filter(r => r.isValid).length;
+                    this.csvErrorCount = this.csvPreviewData.filter(r => !r.isValid).length;
+                },
+
+                clearCsvData() {
+                    this.csvFileName = '';
+                    this.csvPreviewData = [];
+                    this.csvValidCount = 0;
+                    this.csvErrorCount = 0;
+                    this.csvValidationErrors = [];
+                    document.getElementById('csvFileInput').value = '';
+                },
+
+                formatRupiah(amount) {
+                    if (!amount) return 'Rp 0';
+                    const number = parseInt(amount.toString().replace(/[^0-9]/g, ''));
+                    return 'Rp ' + number.toLocaleString('id-ID');
+                },
+
                 submitForm() {
                     // Submit via normal form submission or AJAX
                     this.$el.closest('form').submit();
                 }
             }
         }
+
+        // Make wizard instance globally accessible for info window buttons
+        document.addEventListener('alpine:init', () => {
+            Alpine.store('wizard', {});
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(() => {
+                const wizardElement = document.querySelector('[x-data*="clusterWizard"]');
+                if (wizardElement && wizardElement.__x) {
+                    window.clusterWizardInstance = wizardElement.__x.$data;
+                }
+            }, 500);
+        });
     </script>
 @endpush

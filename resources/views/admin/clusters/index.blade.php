@@ -97,101 +97,155 @@
                         </form>
                     </div>
 
-                    <!-- Clusters Grid -->
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        @forelse($clusters as $cluster)
-                            <div class="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-all">
-                                <!-- Cluster Image/Logo -->
-                                <div class="relative h-40 bg-gradient-to-br from-green-500 to-emerald-600">
-                                    @if ($cluster->picture && file_exists(storage_path('app/public/' . $cluster->picture)))
-                                        <img src="{{ asset('storage/' . $cluster->picture) }}" alt="{{ $cluster->name }}"
-                                            class="w-full h-full object-cover">
-                                    @else
-                                        <div class="w-full h-full flex items-center justify-center">
-                                            <i class="fa-solid fa-building text-white text-6xl opacity-30"></i>
-                                        </div>
-                                    @endif
-                                    
-                                    <!-- Status Badge -->
-                                    <div class="absolute top-3 right-3">
-                                        @if ($cluster->active_flag)
-                                            <span class="px-3 py-1 bg-green-500 text-white rounded-full text-xs font-semibold shadow-lg">
-                                                <i class="fa-solid fa-check-circle"></i> Active
-                                            </span>
-                                        @else
-                                            <span class="px-3 py-1 bg-gray-500 text-white rounded-full text-xs font-semibold shadow-lg">
-                                                <i class="fa-solid fa-ban"></i> Inactive
-                                            </span>
-                                        @endif
-                                    </div>
+                    <!-- Clusters Table -->
+                    <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="w-full">
+                                <thead>
+                                    <tr class="bg-gradient-to-r from-green-600 to-emerald-600 text-white">
+                                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">
+                                            <i class="fa-solid fa-building mr-1"></i> Cluster
+                                        </th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">
+                                            <i class="fa-solid fa-address-card mr-1"></i> Kontak
+                                        </th>
+                                        <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider">
+                                            <i class="fa-solid fa-users mr-1"></i> Staff
+                                        </th>
+                                        <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider">
+                                            <i class="fa-solid fa-toggle-on mr-1"></i> Status
+                                        </th>
+                                        <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider">
+                                            <i class="fa-solid fa-cog mr-1"></i> Aksi
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-200">
+                                    @forelse($clusters as $cluster)
+                                        <tr class="hover:bg-green-50 transition-colors">
+                                            <!-- Cluster Info -->
+                                            <td class="px-4 py-4">
+                                                <div class="flex items-center gap-3">
+                                                    <!-- Logo/Picture -->
+                                                    <div class="flex-shrink-0">
+                                                        @if ($cluster->logo && file_exists(storage_path('app/public/' . $cluster->logo)))
+                                                            <img src="{{ asset('storage/' . $cluster->logo) }}" 
+                                                                alt="{{ $cluster->name }}"
+                                                                class="w-12 h-12 rounded-lg object-contain bg-gray-100 p-1 shadow">
+                                                        @else
+                                                            <div class="w-12 h-12 rounded-lg bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center shadow">
+                                                                <i class="fa-solid fa-building text-white text-xl"></i>
+                                                            </div>
+                                                        @endif
+                                                    </div>
+                                                    <!-- Name & Description -->
+                                                    <div class="flex-1 min-w-0">
+                                                        <p class="text-sm font-bold text-gray-900 truncate">{{ $cluster->name }}</p>
+                                                        <p class="text-xs text-gray-500 truncate">{{ $cluster->description }}</p>
+                                                    </div>
+                                                </div>
+                                            </td>
 
-                                    <!-- Logo Overlay -->
-                                    @if ($cluster->logo && file_exists(storage_path('app/public/' . $cluster->logo)))
-                                        <div class="absolute bottom-3 left-3">
-                                            <img src="{{ asset('storage/' . $cluster->logo) }}" alt="Logo"
-                                                class="w-16 h-16 rounded-lg bg-white shadow-lg object-contain p-2">
-                                        </div>
-                                    @endif
-                                </div>
+                                            <!-- Contact Info -->
+                                            <td class="px-4 py-4">
+                                                <div class="space-y-1">
+                                                    <div class="flex items-center gap-2 text-xs text-gray-700">
+                                                        <i class="fa-solid fa-envelope text-green-600 w-4"></i>
+                                                        <span class="truncate">{{ $cluster->email }}</span>
+                                                    </div>
+                                                    <div class="flex items-center gap-2 text-xs text-gray-700">
+                                                        <i class="fa-solid fa-phone text-green-600 w-4"></i>
+                                                        <span>{{ $cluster->phone }}</span>
+                                                    </div>
+                                                </div>
+                                            </td>
 
-                                <!-- Cluster Info -->
-                                <div class="p-4">
-                                    <h3 class="text-lg font-bold text-gray-800 mb-2">{{ $cluster->name }}</h3>
-                                    <p class="text-xs text-gray-600 mb-3 line-clamp-2">{{ $cluster->description }}</p>
+                                            <!-- Staff Stats -->
+                                            <td class="px-4 py-4">
+                                                <div class="flex items-center justify-center gap-3">
+                                                    <!-- Employees -->
+                                                    <div class="text-center">
+                                                        <div class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-blue-700 font-bold text-xs">
+                                                            {{ $cluster->employees_count ?? 0 }}
+                                                        </div>
+                                                        <p class="text-xs text-gray-500 mt-0.5">Emp</p>
+                                                    </div>
+                                                    <!-- Securities -->
+                                                    <div class="text-center">
+                                                        <div class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-orange-100 text-orange-700 font-bold text-xs">
+                                                            {{ $cluster->securities_count ?? 0 }}
+                                                        </div>
+                                                        <p class="text-xs text-gray-500 mt-0.5">Sec</p>
+                                                    </div>
+                                                    <!-- Offices -->
+                                                    <div class="text-center">
+                                                        <div class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-purple-100 text-purple-700 font-bold text-xs">
+                                                            {{ $cluster->offices_count ?? 0 }}
+                                                        </div>
+                                                        <p class="text-xs text-gray-500 mt-0.5">Off</p>
+                                                    </div>
+                                                </div>
+                                            </td>
 
-                                    <!-- Contact Info -->
-                                    <div class="space-y-1.5 mb-4">
-                                        <div class="flex items-center gap-2 text-xs text-gray-600">
-                                            <i class="fa-solid fa-envelope text-green-600 w-4"></i>
-                                            <span class="truncate">{{ $cluster->email }}</span>
-                                        </div>
-                                        <div class="flex items-center gap-2 text-xs text-gray-600">
-                                            <i class="fa-solid fa-phone text-green-600 w-4"></i>
-                                            <span>{{ $cluster->phone }}</span>
-                                        </div>
-                                    </div>
+                                            <!-- Status -->
+                                            <td class="px-4 py-4 text-center">
+                                                @if ($cluster->active_flag)
+                                                    <span class="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold">
+                                                        <i class="fa-solid fa-check-circle"></i> Active
+                                                    </span>
+                                                @else
+                                                    <span class="inline-flex items-center gap-1 px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-xs font-semibold">
+                                                        <i class="fa-solid fa-ban"></i> Inactive
+                                                    </span>
+                                                @endif
+                                            </td>
 
-                                    <!-- Stats -->
-                                    <div class="grid grid-cols-3 gap-2 mb-4">
-                                        <div class="text-center p-2 bg-blue-50 rounded-lg">
-                                            <div class="text-lg font-bold text-blue-600">{{ $cluster->employees_count ?? 0 }}</div>
-                                            <div class="text-xs text-gray-600">Employees</div>
-                                        </div>
-                                        <div class="text-center p-2 bg-orange-50 rounded-lg">
-                                            <div class="text-lg font-bold text-orange-600">{{ $cluster->securities_count ?? 0 }}</div>
-                                            <div class="text-xs text-gray-600">Securities</div>
-                                        </div>
-                                        <div class="text-center p-2 bg-purple-50 rounded-lg">
-                                            <div class="text-lg font-bold text-purple-600">{{ $cluster->offices_count ?? 0 }}</div>
-                                            <div class="text-xs text-gray-600">Offices</div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Actions -->
-                                    <div class="flex gap-2">
-                                        <a href="{{ route('admin.clusters.show', $cluster) }}"
-                                            class="flex-1 text-center px-3 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition font-semibold">
-                                            <i class="fa-solid fa-eye"></i> Detail
-                                        </a>
-                                        <a href="{{ route('admin.clusters.edit', $cluster) }}"
-                                            class="flex-1 text-center px-3 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition font-semibold">
-                                            <i class="fa-solid fa-edit"></i> Edit
-                                        </a>
-                                    </div>
-                                </div>
-                            </div>
-                        @empty
-                            <div class="col-span-full">
-                                <div class="bg-white rounded-xl shadow-lg p-12 text-center">
-                                    <i class="fa-solid fa-building-slash text-6xl text-gray-300 mb-4"></i>
-                                    <p class="text-gray-500 font-medium">Belum ada cluster terdaftar</p>
-                                    <a href="{{ route('admin.clusters.create') }}"
-                                        class="inline-block mt-4 px-6 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-semibold">
-                                        <i class="fa-solid fa-plus-circle mr-1"></i> Tambah Cluster Pertama
-                                    </a>
-                                </div>
-                            </div>
-                        @endforelse
+                                            <!-- Actions -->
+                                            <td class="px-4 py-4">
+                                                <div class="flex items-center justify-center gap-2">
+                                                    <a href="{{ route('admin.clusters.show', $cluster) }}"
+                                                        class="inline-flex items-center justify-center w-8 h-8 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                                                        title="Detail">
+                                                        <i class="fa-solid fa-eye text-sm"></i>
+                                                    </a>
+                                                    <a href="{{ route('admin.clusters.edit', $cluster) }}"
+                                                        class="inline-flex items-center justify-center w-8 h-8 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                                                        title="Edit">
+                                                        <i class="fa-solid fa-edit text-sm"></i>
+                                                    </a>
+                                                    <button type="button"
+                                                        class="inline-flex items-center justify-center w-8 h-8 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                                                        title="Delete"
+                                                        onclick="confirm('Hapus cluster {{ $cluster->name }}?') && document.getElementById('delete-form-{{ $cluster->id }}').submit()">
+                                                        <i class="fa-solid fa-trash text-sm"></i>
+                                                    </button>
+                                                    <form id="delete-form-{{ $cluster->id }}" 
+                                                        action="{{ route('admin.clusters.destroy', $cluster) }}" 
+                                                        method="POST" class="hidden">
+                                                        @csrf
+                                                        @method('DELETE')
+                                                    </form>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    @empty
+                                        <tr>
+                                            <td colspan="5" class="px-4 py-12">
+                                                <div class="text-center">
+                                                    <i class="fa-solid fa-building-slash text-6xl text-gray-300 mb-4"></i>
+                                                    <p class="text-gray-500 font-medium mb-4">Belum ada cluster terdaftar</p>
+                                                    <a href="{{ route('admin.clusters.create') }}"
+                                                        class="inline-flex items-center gap-2 px-6 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-semibold">
+                                                        <i class="fa-solid fa-plus-circle"></i>
+                                                        <span>Tambah Cluster Pertama</span>
+                                                    </a>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    @endforelse
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
 
                     <!-- Pagination -->

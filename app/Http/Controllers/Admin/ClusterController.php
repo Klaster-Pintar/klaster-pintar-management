@@ -10,6 +10,7 @@ use App\Models\ClusterEmployee;
 use App\Models\ClusterSecurity;
 use App\Models\ClusterBankAccount;
 use App\Models\ClusterResident;
+use App\Models\Resident;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -105,6 +106,9 @@ class ClusterController extends Controller
             'bank_accounts.*.account_holder' => 'required|string|max:255',
             'bank_accounts.*.bank_type' => 'required|string|max:15',
             'bank_accounts.*.bank_code_id' => 'required|integer',
+
+            // Step 7: Residents CSV
+            'residents_csv_data' => 'nullable|json',
         ]);
 
         DB::beginTransaction();
@@ -221,10 +225,35 @@ class ClusterController extends Controller
                 ]);
             }
 
+            // Process Residents CSV Import
+            $residentsImported = 0;
+            $residentsErrors = [];
+
+            if (!empty($validated['residents_csv_data'])) {
+                $csvData = json_decode($validated['residents_csv_data'], true);
+
+                foreach ($csvData as $index => $residentData) {
+                    try {
+                        $this->processResidentImport($cluster->id, $residentData, Auth::id());
+                        $residentsImported++;
+                    } catch (\Exception $e) {
+                        $residentsErrors[] = "Baris " . ($index + 2) . ": " . $e->getMessage();
+                    }
+                }
+            }
+
             DB::commit();
 
+            $message = 'Cluster berhasil dibuat! 🎉';
+            if ($residentsImported > 0) {
+                $message .= " {$residentsImported} residents berhasil di-import.";
+            }
+            if (!empty($residentsErrors)) {
+                $message .= " Namun ada beberapa error: " . implode('; ', array_slice($residentsErrors, 0, 3));
+            }
+
             return redirect()->route('admin.clusters.show', $cluster)
-                ->with('success', 'Cluster berhasil dibuat! 🎉');
+                ->with('success', $message);
 
         } catch (\Exception $e) {
             DB::rollBack();
@@ -323,5 +352,77 @@ class ClusterController extends Controller
 
         return redirect()->route('admin.clusters.index')
             ->with('success', 'Cluster berhasil dihapus!');
+    }
+
+    /**
+     * Process single resident import from CSV
+     * 
+     * @param int $clusterId
+     * @param array $data
+     * @param int $createdById
+     * @return void
+     * @throws \Exception
+     */
+    private function processResidentImport($clusterId, $data, $createdById)
+    {
+        $phone = trim($data['phone']);
+        $houseBlock = trim($data['house_block']);
+        $houseNumber = trim($data['house_number']);
+        $name = trim($data['name']);
+
+        // Check if user already exists by phone (username)
+        $existingUser = User::where('username', $phone)->first();
+
+        if ($existingUser) {
+            // User exists, use existing user_id
+            $userId = $existingUser->id;
+        } else {
+            // Create new user in ihm_m_users with phone as username
+            $newUser = User::create([
+                'name' => $name,
+                'username' => $phone,
+                'phone' => $phone,
+                'email' => null,
+                'password' => Hash::make('password123'), // Default password
+                'role' => 'RESIDENT',
+                'status' => $data['user_status'] === 'Active' ? 'VERIFIED' : 'PENDING',
+                'active_flag' => $data['user_status'] === 'Active',
+                'created_id' => $createdById,
+            ]);
+            $userId = $newUser->id;
+        }
+
+        // Create resident in ihm_m_residents
+        $resident = Resident::create([
+            'name' => $name,
+            'username' => $phone,
+            'phone' => $phone,
+            'email' => null,
+            'password' => Hash::make('password123'),
+            'house_block' => $houseBlock,
+            'house_number' => $houseNumber,
+            'role' => 'RESIDENT',
+            'status' => $data['user_status'] === 'Active' ? 'VERIFIED' : 'PENDING',
+            'active_flag' => $data['user_status'] === 'Active',
+            'created_id' => $createdById,
+        ]);
+
+        // Check if house already occupied in this cluster
+        $existingResident = DB::table(env('TABLE_PREFIX', 'ihm_') . 'm_cluster_d_residents')
+            ->where('ihm_m_clusters_id', $clusterId)
+            ->where('resident_id', $resident->id)
+            ->whereNull('deleted_at')
+            ->first();
+
+        if ($existingResident) {
+            throw new \Exception("Rumah Blok {$houseBlock} No {$houseNumber} sudah terisi di cluster ini");
+        }
+
+        // Create cluster_d_resident link
+        ClusterResident::create([
+            'ihm_m_clusters_id' => $clusterId,
+            'resident_id' => $resident->id,
+            'created_id' => $createdById,
+        ]);
     }
 }

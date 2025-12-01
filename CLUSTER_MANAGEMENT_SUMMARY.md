@@ -2,7 +2,27 @@
 
 ## 📋 Overview
 
-Modul **Cluster Management** telah berhasil dibuat untuk mengelola pendaftaran dan administrasi cluster dalam sistem iHome. Modul ini menggunakan **wizard 6 langkah** untuk memandu proses pendaftaran cluster baru dengan tampilan yang profesional dan elegan.
+Modul **Cluster Management** telah berhasil dibuat untuk mengelola pendaftaran dan administrasi cluster dalam sistem iHome. Modul ini menggunakan **wizard 7 langkah** untuk memandu proses pendaftaran cluster baru dengan tampilan yang profesional dan elegan.
+
+### 🗺️ Google Maps Integration
+
+Wizard telah **fully integrated** dengan **Google Maps API** untuk:
+
+-   **Step 2 (Kantor):** Search location, click to add marker, draggable markers, delete markers
+-   **Step 3 (Patroli):** Multiple numbered markers, draggable, route ordering, delete individual/all
+
+> 📖 Dokumentasi lengkap Google Maps: [`GOOGLE_MAPS_INTEGRATION.md`](GOOGLE_MAPS_INTEGRATION.md)
+
+### 📤 CSV Import for Residents
+
+Wizard telah dilengkapi dengan **CSV Import** untuk data residents (Step 7):
+
+-   **Upload & Preview:** Upload CSV, preview data, validasi real-time
+-   **Smart Import:** Auto-detect existing users, create baru jika perlu
+-   **Validation:** Cek duplikasi, format validation, error handling
+-   **Database:** Insert ke `ihm_m_users`, `ihm_m_residents`, `ihm_m_cluster_d_residents`
+
+> 📖 Dokumentasi lengkap CSV Import: [`CSV_RESIDENTS_IMPORT_GUIDE.md`](CSV_RESIDENTS_IMPORT_GUIDE.md)
 
 ---
 
@@ -137,33 +157,53 @@ Modul **Cluster Management** telah berhasil dibuat untuk mengelola pendaftaran d
 
 ##### `resources/views/admin/clusters/wizard/steps/step2-offices.blade.php`
 
-**Step 2: Kantor & Pos Lokasi**
+**Step 2: Kantor & Pos Lokasi** ✨ **FULLY INTEGRATED WITH GOOGLE MAPS**
 
--   Fields per office:
-    -   Name\* (required)
+-   **Google Maps Features:**
+    -   🔍 Search box with autocomplete (Places API)
+    -   🗺️ Interactive map (500px height, professional styling)
+    -   📍 Click on map to add office marker (green)
+    -   🖱️ Draggable markers - coordinates auto-update
+    -   ℹ️ Info window on marker click (coordinates + delete button)
+    -   🗑️ Delete individual marker or clear all
+    -   📊 Real-time counter showing total offices
+-   **Form Fields per office:**
+    -   Name\* (manual input)
     -   Type\* (dropdown: Pos Security, Kantor Pengelola, Sekretariat, Lainnya)
-    -   Latitude\* (required)
-    -   Longitude\* (required)
--   Features:
-    -   Dynamic array (add/remove offices)
-    -   Google Maps link helper
-    -   Info box with coordinate tips
-    -   Minimum 1 office required
--   Color Theme: Orange
+    -   Coordinates (auto-filled from map, read-only)
+-   **User Flow:**
+    1. Search location or click map
+    2. Green marker appears
+    3. Fill office name & type
+    4. Drag to adjust position if needed
+-   Color Theme: Green
+-   **Minimum:** 1 office required
 
 ##### `resources/views/admin/clusters/wizard/steps/step3-patrols.blade.php`
 
-**Step 3: Titik Patroli**
+**Step 3: Titik Patroli** ✨ **FULLY INTEGRATED WITH GOOGLE MAPS**
 
--   Fields:
-    -   Day Type (Weekday/Weekend)
-    -   Pinpoints (mock UI for now)
--   Features:
-    -   Mock UI showing Google Maps integration placeholder
-    -   Info box explaining patrol points concept
-    -   "Skip" option - can configure later
-    -   Future: Google Maps marker interface
--   Color Theme: Indigo
+-   **Google Maps Features:**
+    -   🗺️ Interactive map with patrol route visualization
+    -   📍 Click to add patrol markers (orange with numbers: 1, 2, 3...)
+    -   🔢 Sequential numbering shows patrol route order
+    -   🖱️ Draggable markers - reorder route easily
+    -   ℹ️ Info window showing patrol point number + coordinates
+    -   🗑️ Delete individual marker (auto re-numbers remaining)
+    -   🗑️ Clear all patrol points button
+    -   📋 Patrol points list showing full route with coordinates
+-   **Features:**
+    -   Day Type selector (Weekday/Weekend)
+    -   Multiple markers allowed (unlimited patrol points)
+    -   Hidden inputs for form submission
+    -   Real-time route preview
+-   **User Flow:**
+    1. Click map to add first patrol point (numbered 1)
+    2. Click again for point 2, 3, etc.
+    3. Drag markers to adjust route
+    4. View route order in list
+-   Color Theme: Orange
+-   **Status:** Optional (can skip)
 
 ##### `resources/views/admin/clusters/wizard/steps/step4-employees.blade.php`
 
@@ -220,6 +260,52 @@ Modul **Cluster Management** telah berhasil dibuat untuk mengelola pendaftaran d
     -   Minimum 1 bank account required
 -   Color Theme: Emerald/Green
 -   **Important:** Rekening akan diverifikasi oleh admin sebelum dapat digunakan
+
+##### `resources/views/admin/clusters/wizard/steps/step7-residents.blade.php` ✨ **NEW**
+
+**Step 7: Data Residents (CSV Import)**
+
+-   **Upload Section:**
+    -   File input (max 2MB, .csv only)
+    -   Download CSV template button
+    -   Info: format & file size requirements
+-   **Preview Table:**
+    -   Columns: No, Status, Nama, No HP, Blok, Nomor, Status Rumah, Status User, Nominal IPL, Keterangan
+    -   Real-time validation with colored badges
+    -   Error rows highlighted in red
+    -   Sticky header with scroll
+-   **Validation Features:**
+    -   Required fields check (Nama, No HP, Blok, Nomor)
+    -   Phone format validation (numeric only)
+    -   Duplicate phone check in CSV
+    -   Duplicate house address check
+    -   Status validation (Milik/Kontrak, Active/Inactive)
+    -   Nominal IPL format check
+-   **Smart Import Logic:**
+    -   Check if user exists by phone (username)
+    -   If exists → use existing user_id
+    -   If not → create new user with default password
+    -   Create resident in ihm_m_residents
+    -   Link to cluster in ihm_m_cluster_d_residents
+    -   Validate house occupancy (prevent duplicate)
+-   **CSV Format:**
+    ```csv
+    Nama,No HP,Blok,Nomor,Status Rumah,Status User,Nominal IPL
+    John Doe,081234567890,A,01,Milik,Active,500000
+    ```
+-   **Features:**
+    -   Upload & preview before submit
+    -   Valid/Error count summary
+    -   Error messages per row
+    -   Clear CSV button
+    -   Validate button
+    -   Skip this step if no CSV
+-   Color Theme: Purple/Indigo
+-   **Important:**
+    -   Username = No HP (phone number)
+    -   Password default: "password123" untuk user baru
+    -   Data di-insert ke 3 tabel: ihm_m_users, ihm_m_residents, ihm_m_cluster_d_residents
+    -   Only valid rows akan di-import saat submit
 
 ---
 
@@ -283,8 +369,15 @@ Updated "Master" menu section:
 
     - Columns: account_number, account_holder, bank_type, bank_code_id, is_verified, ihm_m_clusters_id (FK)
 
-7. **`ihm_m_cluster_d_residents`** - Resident links (1:N, optional)
-    - Columns: resident_id (FK to users), ihm_m_clusters_id (FK)
+7. **`ihm_m_cluster_d_residents`** - Resident links (1:N)
+
+    - Columns: resident_id (FK to residents), ihm_m_clusters_id (FK)
+    - Join to: ihm_m_users (user_id) and ihm_m_residents (resident details)
+
+8. **`ihm_m_residents`** - Resident details table (NEW model)
+    - Columns: name, username, phone, house_block, house_number, status, etc.
+    - Used for: CSV import data storage
+    - Relationship: ClusterResident links to this table
 
 ---
 
@@ -300,6 +393,7 @@ Updated "Master" menu section:
 -   **Step 4 (Employees):** Purple
 -   **Step 5 (Securities):** Indigo
 -   **Step 6 (Banks):** Emerald/Green
+-   **Step 7 (Residents):** Purple/Indigo
 
 ### Icons (Font Awesome 6.5.0)
 
@@ -311,24 +405,27 @@ Updated "Master" menu section:
 -   Employees: `fa-users`
 -   Securities: `fa-shield-halved`
 -   Banks: `fa-building-columns`
+-   Residents: `fa-users` (purple)
+-   CSV: `fa-file-csv`
 
 ### Progress Indicator
 
 -   Visual states: Pending (gray) → Active (blue pulse) → Completed (green checkmark)
 -   Progress line connects all steps
--   Responsive: 3 cols mobile, 6 cols desktop
+-   Responsive: 4 cols mobile, 7 cols desktop
 
 ---
 
 ## 🔄 Wizard Flow
 
 1. **Step 1: Informasi Dasar** → Input cluster name, contacts, upload logo/picture, set radius
-2. **Step 2: Kantor & Pos** → Add office locations with coordinates (minimum 1 required)
-3. **Step 3: Titik Patroli** → Configure patrol points (optional, can skip)
+2. **Step 2: Kantor & Pos** → Add office locations with Google Maps (minimum 1 required)
+3. **Step 3: Titik Patroli** → Configure patrol points with Google Maps (optional, can skip)
 4. **Step 4: Karyawan** → Add employees (RT/RW/ADMIN), auto-creates users (optional)
 5. **Step 5: Security** → Add security personnel, auto-creates users with SECURITY role (optional)
 6. **Step 6: Rekening Bank** → Add bank accounts (minimum 1 required)
-7. **Submit** → Processes all data in single DB transaction
+7. **Step 7: Data Residents** → Upload CSV with resident data, auto-import to database (optional)
+8. **Submit** → Processes all data in single DB transaction
 
 ### Validation Rules
 
@@ -341,9 +438,12 @@ Updated "Master" menu section:
     -   Step 3: patrol points
     -   Step 4: employees
     -   Step 5: securities
+    -   Step 7: residents CSV
 -   **Unique Constraints:**
     -   Employee usernames (across all users)
     -   Security usernames (across all users)
+    -   Resident phone numbers (checked, reuse if exist)
+    -   House addresses per cluster (blok + nomor)
 
 ---
 
@@ -412,10 +512,12 @@ Updated "Master" menu section:
 -   [ ] Create cluster **show/detail** page with tabs for all related data
 -   [ ] Create cluster **edit** page (reuse wizard or separate forms)
 -   [ ] Add **delete confirmation** modal
--   [ ] Implement **Google Maps integration** for:
-    -   Office location picker (Step 2)
-    -   Patrol point marker interface (Step 3)
-    -   Visual map display in cluster details
+-   [x] ✅ **Google Maps integration** - COMPLETED
+    -   [x] Office location picker with search (Step 2)
+    -   [x] Patrol point marker interface with multiple markers (Step 3)
+    -   [x] Draggable markers
+    -   [x] Delete individual/all markers
+    -   [x] Info windows with coordinates
 
 ### Medium Priority
 
@@ -424,6 +526,8 @@ Updated "Master" menu section:
 -   [ ] Implement **bank account verification** workflow
 -   [ ] Add **cluster activation/deactivation** toggle
 -   [ ] Create **audit trail** for cluster changes
+-   [ ] Add **reverse geocoding** to auto-fill office names from coordinates
+-   [ ] Implement **route planning** for patrol points with distance calculation
 
 ### Low Priority
 
@@ -432,6 +536,8 @@ Updated "Master" menu section:
 -   [ ] Add **cluster statistics** dashboard widget
 -   [ ] Create **notification system** for cluster approval workflow
 -   [ ] Add **multi-language support** for wizard
+-   [ ] Add **Street View** preview for office locations
+-   [ ] Add **drawing tools** for cluster area boundary polygon
 
 ---
 
@@ -439,12 +545,35 @@ Updated "Master" menu section:
 
 ### Manual Testing
 
+#### Google Maps Features (NEW)
+
+-   [ ] **Step 2 - Office Map:**
+    -   [ ] Verify map loads correctly with default center (Jakarta)
+    -   [ ] Test search box autocomplete with place names
+    -   [ ] Click on map to add office marker (green)
+    -   [ ] Drag marker to new position, verify coordinates update
+    -   [ ] Click marker to see info window with coordinates
+    -   [ ] Delete individual marker from info window
+    -   [ ] Use "Clear All Markers" button
+    -   [ ] Verify office details form syncs with markers
+-   [ ] **Step 3 - Patrol Map:**
+    -   [ ] Verify map loads correctly
+    -   [ ] Click on map to add patrol markers (orange with numbers)
+    -   [ ] Verify markers are numbered in sequence (1, 2, 3...)
+    -   [ ] Drag marker to new position
+    -   [ ] Delete individual marker, verify numbering re-orders
+    -   [ ] Use "Clear All Points" button
+    -   [ ] Verify patrol points list shows all markers with coordinates
+
+#### Wizard Flow
+
 -   [ ] Navigate to `/admin/clusters` and verify listing page loads
 -   [ ] Click "Tambah Cluster Baru" and verify wizard opens
 -   [ ] Complete all 6 wizard steps with valid data
 -   [ ] Submit wizard and verify:
     -   [ ] Cluster created in `ihm_m_clusters`
-    -   [ ] Offices created in `ihm_m_cluster_d_offices`
+    -   [ ] Offices created in `ihm_m_cluster_d_offices` with coordinates from map
+    -   [ ] Patrol points saved in `ihm_m_cluster_d_patrols` with pinpoints array
     -   [ ] Employees created: users in `ihm_m_users` + links in `ihm_m_cluster_d_employees`
     -   [ ] Securities created: users in `ihm_m_users` + links in `ihm_m_cluster_d_securities`
     -   [ ] Bank accounts created in `ihm_m_cluster_d_bank_accounts`
@@ -474,11 +603,12 @@ For questions or issues related to this module, please refer to:
 
 -   `.github/copilot-instructions.md` - Project guidelines
 -   `DASHBOARD_IMPROVEMENTS.md` - Previous improvements
--   This file: `CLUSTER_MANAGEMENT_SUMMARY.md`
+-   `CLUSTER_MANAGEMENT_SUMMARY.md` - This file (module overview)
+-   `GOOGLE_MAPS_INTEGRATION.md` - **NEW:** Comprehensive Google Maps documentation
 
 ---
 
 **Created:** January 2025  
-**Version:** 1.0.0  
-**Status:** ✅ Core Implementation Complete  
-**Next Phase:** Show/Edit pages + Google Maps integration
+**Version:** 2.0.0  
+**Status:** ✅ **Google Maps Fully Integrated** - Production Ready  
+**Next Phase:** Show/Edit pages

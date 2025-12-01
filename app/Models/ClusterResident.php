@@ -31,6 +31,11 @@ class ClusterResident extends Model
 
     public function resident()
     {
+        return $this->belongsTo(Resident::class, 'resident_id');
+    }
+
+    public function user()
+    {
         return $this->belongsTo(User::class, 'resident_id');
     }
 }
