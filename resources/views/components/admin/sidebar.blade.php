@@ -104,7 +104,7 @@
                         <i class="fa-solid fa-receipt w-4"></i>
                         <span>Cluster Subscription</span>
                     </a>
-                    <a href="#"
+                    <!-- <a href="#"
                         class="flex items-center gap-2 px-3 py-1.5 rounded-md transition-all text-xs {{ $activeMenu === 'finance.notification' ? 'bg-green-500 text-white font-medium' : 'hover:bg-green-50 text-gray-600' }}">
                         <i class="fa-solid fa-bell w-4"></i>
                         <span>Notification</span>
@@ -118,7 +118,7 @@
                         class="flex items-center gap-2 px-3 py-1.5 rounded-md transition-all text-xs {{ $activeMenu === 'finance.reports' ? 'bg-green-500 text-white font-medium' : 'hover:bg-green-50 text-gray-600' }}">
                         <i class="fa-solid fa-file-invoice-dollar w-4"></i>
                         <span>Finance Reports</span>
-                    </a>
+                    </a> -->
                 </div>
             </div>
 
@@ -139,15 +139,15 @@
                 </button>
 
                 <div x-show="open" x-collapse class="mt-1 space-y-0.5 ml-11">
-                    <a href="#"
-                        class="flex items-center gap-2 px-3 py-1.5 rounded-md transition-all text-xs {{ $activeMenu === 'iot.devices' ? 'bg-orange-500 text-white font-medium' : 'hover:bg-orange-50 text-gray-600' }}">
+                    <a href="{{ route('admin.iot.device-tracking.index') }}"
+                        class="flex items-center gap-2 px-3 py-1.5 rounded-md transition-all text-xs {{ $activeMenu === 'iot-device-tracking' ? 'bg-orange-500 text-white font-medium' : 'hover:bg-orange-50 text-gray-600' }}">
                         <i class="fa-solid fa-satellite-dish w-4"></i>
                         <span>Device Tracking</span>
                     </a>
-                    <a href="#"
-                        class="flex items-center gap-2 px-3 py-1.5 rounded-md transition-all text-xs {{ $activeMenu === 'iot.logs' ? 'bg-orange-500 text-white font-medium' : 'hover:bg-orange-50 text-gray-600' }}">
-                        <i class="fa-solid fa-file-lines w-4"></i>
-                        <span>Log Data</span>
+                    <a href="{{ route('admin.iot.device-management.index') }}"
+                        class="flex items-center gap-2 px-3 py-1.5 rounded-md transition-all text-xs {{ $activeMenu === 'iot-device-management' ? 'bg-orange-500 text-white font-medium' : 'hover:bg-orange-50 text-gray-600' }}">
+                        <i class="fa-solid fa-microchip w-4"></i>
+                        <span>Device Management</span>
                     </a>
                 </div>
             </div>

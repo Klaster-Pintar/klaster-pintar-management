@@ -9,6 +9,8 @@ use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\ClusterController;
 use App\Http\Controllers\Admin\FinanceSettlementController;
 use App\Http\Controllers\Admin\ClusterSubscriptionController;
+use App\Http\Controllers\Admin\DeviceManagementController;
+use App\Http\Controllers\Admin\DeviceTrackingController;
 
 Route::get('/', function () {
     if (Auth::check()) {
@@ -55,6 +57,18 @@ Route::middleware('auth')->group(function () {
             Route::get('/settlement/{id}', [FinanceSettlementController::class, 'show'])->name('settlement.show');
             Route::post('/settlement/{id}/approve', [FinanceSettlementController::class, 'approve'])->name('settlement.approve');
             Route::post('/settlement/{id}/reject', [FinanceSettlementController::class, 'reject'])->name('settlement.reject');
+        });
+
+        // IoT Monitoring Routes
+        Route::prefix('iot')->name('iot.')->group(function () {
+            // Device Tracking Routes
+            Route::get('/device-tracking', [DeviceTrackingController::class, 'index'])->name('device-tracking.index');
+            Route::get('/device-tracking/{device}/status', [DeviceTrackingController::class, 'getDeviceStatus'])->name('device-tracking.status');
+
+            // Device Management Routes (CRUD)
+            Route::resource('device-management', DeviceManagementController::class)->parameters([
+                'device-management' => 'device'
+            ]);
         });
     });
 });
