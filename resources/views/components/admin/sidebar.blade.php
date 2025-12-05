@@ -169,25 +169,25 @@
                 </button>
 
                 <div x-show="open" x-collapse class="mt-1 space-y-0.5 ml-11">
-                    <a href="#"
-                        class="flex items-center gap-2 px-3 py-1.5 rounded-md transition-all text-xs {{ $activeMenu === 'affiliate.users' ? 'bg-pink-500 text-white font-medium' : 'hover:bg-pink-50 text-gray-600' }}">
+                    <a href="{{ route('admin.affiliate.marketing.index') }}"
+                        class="flex items-center gap-2 px-3 py-1.5 rounded-md transition-all text-xs {{ $activeMenu === 'affiliate.marketing' ? 'bg-pink-500 text-white font-medium' : 'hover:bg-pink-50 text-gray-600' }}">
                         <i class="fa-solid fa-users w-4"></i>
-                        <span>Affiliate Users</span>
+                        <span>Data Marketing</span>
                     </a>
-                    <a href="#"
-                        class="flex items-center gap-2 px-3 py-1.5 rounded-md transition-all text-xs {{ $activeMenu === 'affiliate.reports' ? 'bg-pink-500 text-white font-medium' : 'hover:bg-pink-50 text-gray-600' }}">
-                        <i class="fa-solid fa-chart-simple w-4"></i>
-                        <span>Affiliate Reports</span>
+                    <a href="{{ route('admin.affiliate.mapping.index') }}"
+                        class="flex items-center gap-2 px-3 py-1.5 rounded-md transition-all text-xs {{ $activeMenu === 'affiliate.mapping' ? 'bg-pink-500 text-white font-medium' : 'hover:bg-pink-50 text-gray-600' }}">
+                        <i class="fa-solid fa-link w-4"></i>
+                        <span>Mapping Cluster</span>
                     </a>
-                    <a href="#"
-                        class="flex items-center gap-2 px-3 py-1.5 rounded-md transition-all text-xs {{ $activeMenu === 'affiliate.commissions' ? 'bg-pink-500 text-white font-medium' : 'hover:bg-pink-50 text-gray-600' }}">
-                        <i class="fa-solid fa-coins w-4"></i>
-                        <span>Commissions</span>
+                    <a href="{{ route('admin.affiliate.commission.index') }}"
+                        class="flex items-center gap-2 px-3 py-1.5 rounded-md transition-all text-xs {{ $activeMenu === 'affiliate.commission' ? 'bg-pink-500 text-white font-medium' : 'hover:bg-pink-50 text-gray-600' }}">
+                        <i class="fa-solid fa-percent w-4"></i>
+                        <span>Setting Komisi</span>
                     </a>
-                    <a href="#"
-                        class="flex items-center gap-2 px-3 py-1.5 rounded-md transition-all text-xs {{ $activeMenu === 'affiliate.leads' ? 'bg-pink-500 text-white font-medium' : 'hover:bg-pink-50 text-gray-600' }}">
-                        <i class="fa-solid fa-file-contract w-4"></i>
-                        <span>Lead Tracking</span>
+                    <a href="{{ route('admin.affiliate.revenue.index') }}"
+                        class="flex items-center gap-2 px-3 py-1.5 rounded-md transition-all text-xs {{ $activeMenu === 'affiliate.revenue' ? 'bg-pink-500 text-white font-medium' : 'hover:bg-pink-50 text-gray-600' }}">
+                        <i class="fa-solid fa-chart-bar w-4"></i>
+                        <span>Rekap Revenue</span>
                     </a>
                 </div>
             </div>

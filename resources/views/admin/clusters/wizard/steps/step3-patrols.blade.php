@@ -29,12 +29,14 @@
             <button type="button" @click="clearAllPatrolMarkers()"
                 class="px-4 py-2 bg-red-500 text-white text-sm rounded-lg hover:bg-red-600 transition flex items-center gap-2">
                 <i class="fa-solid fa-trash"></i>
-                <span>Clear All Points</span>
+                <span class="hidden sm:inline">Clear All</span>
             </button>
             <div class="flex-1"></div>
-            <div class="text-sm text-gray-600 flex items-center gap-2">
-                <i class="fa-solid fa-circle-info text-orange-500"></i>
-                <span>Total: <strong x-text="patrolMarkers.length"></strong> titik patroli</span>
+            <div class="text-sm text-gray-600 bg-white px-3 py-2 rounded-lg border border-gray-200 flex items-center gap-2">
+                <i class="fa-solid fa-route text-orange-600"></i>
+                <span class="hidden sm:inline">Total:</span>
+                <strong x-text="patrolMarkers.length"></strong>
+                <span class="hidden sm:inline">titik</span>
             </div>
         </div>
 
@@ -42,18 +44,17 @@
         <div id="patrolMap" class="map-container"></div>
 
         <!-- Map Instructions -->
-        <div class="bg-orange-50 border border-orange-200 rounded-lg p-4 mt-4">
+        <div class="bg-gradient-to-br from-orange-50 to-amber-50 border border-orange-200 rounded-lg p-4 mt-4">
             <div class="flex gap-3">
                 <i class="fa-solid fa-lightbulb text-orange-600 text-lg"></i>
                 <div class="text-sm text-gray-700">
                     <p class="font-semibold mb-2">Cara Menggunakan Peta Patroli:</p>
                     <ul class="list-disc list-inside space-y-1 text-xs">
-                        <li><strong>Klik Peta:</strong> Klik pada peta untuk menambah titik patroli (urutan: 1, 2, 3...)
-                        </li>
-                        <li><strong>Drag Marker:</strong> Drag marker (orange dengan nomor) untuk mengubah posisi</li>
+                        <li><strong>🟠 Marker Oranye (Semi-transparan):</strong> Lokasi kantor sebagai referensi titik pusat area patroli</li>
+                        <li><strong>Klik Peta:</strong> Klik pada peta untuk menambah titik patroli (🟠 oranye dengan icon security)</li>
+                        <li><strong>Drag Marker:</strong> Drag marker oranye (dengan icon shield) untuk mengubah posisi</li>
                         <li><strong>Hapus Marker:</strong> Klik marker untuk melihat info dan tombol hapus</li>
-                        <li><strong>Urutan:</strong> Nomor pada marker menunjukkan urutan rute patroli</li>
-                        <li><strong>Clear:</strong> Gunakan tombol "Clear All Points" untuk menghapus semua marker</li>
+                        <li><strong>Icon Security:</strong> Shield icon menandakan titik patroli keamanan</li>
                     </ul>
                 </div>
             </div>

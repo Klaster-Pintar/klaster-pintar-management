@@ -38,30 +38,56 @@
 
         /* Google Maps Styles */
         .map-container {
-            height: 500px;
+            height: 400px;
             border-radius: 12px;
             overflow: hidden;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
         }
 
+        @media (min-width: 768px) {
+            .map-container {
+                height: 500px;
+            }
+        }
+
+        @media (min-width: 1024px) {
+            .map-container {
+                height: 600px;
+            }
+        }
+
         .pac-container {
-            border-radius: 8px;
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-            margin-top: 4px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            margin-top: 8px;
             font-family: 'Poppins', sans-serif;
+            border: none;
         }
 
         .pac-item {
-            padding: 10px;
+            padding: 12px;
             cursor: pointer;
+            border-bottom: 1px solid #f3f4f6;
         }
 
         .pac-item:hover {
-            background-color: #f3f4f6;
+            background-color: #f9fafb;
+        }
+
+        .pac-item:first-child {
+            border-top-left-radius: 12px;
+            border-top-right-radius: 12px;
+        }
+
+        .pac-item:last-child {
+            border-bottom-left-radius: 12px;
+            border-bottom-right-radius: 12px;
+            border-bottom: none;
         }
 
         .marker-info-window {
             font-family: 'Poppins', sans-serif;
+            padding: 4px;
         }
 
         .marker-info-window h4 {
@@ -312,11 +338,13 @@
                 officeMap: null,
                 officeMarkers: [],
                 officeSearchBox: null,
+                nextOfficeMarkerId: 1,
 
                 // Google Maps - Step 3 (Patrols)
                 patrolMap: null,
                 patrolMarkers: [],
                 currentPatrolIndex: 0,
+                nextPatrolMarkerId: 1,
 
                 // CSV Upload - Step 7 (Residents)
                 csvFileName: '',
@@ -342,7 +370,16 @@
                 securityCsvValidationErrors: [],
 
                 init() {
+                    // Prevent double initialization
+                    if (window.clusterWizardInstance) {
+                        console.warn('Wizard already initialized, skipping...');
+                        return;
+                    }
+
                     console.log('Wizard initialized');
+
+                    // Expose this instance to window for onclick handlers
+                    window.clusterWizardInstance = this;
 
                     // Wait for Google Maps to be ready
                     if (googleMapsReady) {
@@ -389,18 +426,22 @@
                         mapTypeControl: true,
                         streetViewControl: false,
                         fullscreenControl: true,
+                        zoomControl: true,
+                        mapTypeControlOptions: {
+                            style: google.maps.MapTypeControlStyle.DROPDOWN_MENU,
+                            position: google.maps.ControlPosition.TOP_RIGHT
+                        },
                         styles: [
                             {
-                                featureType: 'poi',
+                                featureType: 'poi.business',
                                 elementType: 'labels',
-                                stylers: [{ visibility: 'on' }]
+                                stylers: [{ visibility: 'off' }]
                             }
                         ]
                     });
 
-                    // Initialize search box
+                    // Initialize search box - Remove from map controls, let it stay as overlay in HTML
                     this.officeSearchBox = new google.maps.places.SearchBox(searchInput);
-                    this.officeMap.controls[google.maps.ControlPosition.TOP_LEFT].push(searchInput);
 
                     // Bias search results to map viewport
                     this.officeMap.addListener('bounds_changed', () => {
@@ -440,37 +481,51 @@
                 },
 
                 addOfficeMarker(lat, lng, name = '') {
+                    // Create elegant map pin icon with building
+                    const officeIcon = {
+                        path: 'M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z',
+                        fillColor: '#f97316',
+                        fillOpacity: 1,
+                        strokeWeight: 1.5,
+                        strokeColor: '#ffffff',
+                        scale: 1.8,
+                        anchor: new google.maps.Point(12, 22)
+                    };
+
                     const marker = new google.maps.Marker({
                         position: { lat, lng },
                         map: this.officeMap,
                         draggable: true,
                         animation: google.maps.Animation.DROP,
-                        icon: {
-                            url: 'http://maps.google.com/mapfiles/ms/icons/green-dot.png',
-                            scaledSize: new google.maps.Size(40, 40)
-                        }
+                        icon: officeIcon,
+                        title: 'Office Location',
+                        optimized: false
                     });
 
-                    const officeIndex = this.formData.offices.length;
+                    const markerId = this.nextOfficeMarkerId++;
 
                     // Add to offices array
                     this.formData.offices.push({
+                        id: markerId,
                         name: name,
                         type_id: 1,
                         latitude: lat.toFixed(7),
                         longitude: lng.toFixed(7)
                     });
 
-                    // Store marker reference
-                    this.officeMarkers.push({
+                    // Store marker reference with unique ID
+                    const markerObj = {
+                        id: markerId,
                         marker: marker,
-                        index: officeIndex
-                    });
+                        infoWindow: null
+                    };
+                    this.officeMarkers.push(markerObj);
 
                     // Info window
                     const infoWindow = new google.maps.InfoWindow({
-                        content: this.getOfficeInfoWindowContent(officeIndex, lat, lng)
+                        content: this.getOfficeInfoWindowContent(markerId, lat, lng)
                     });
+                    markerObj.infoWindow = infoWindow;
 
                     marker.addListener('click', () => {
                         infoWindow.open(this.officeMap, marker);
@@ -480,45 +535,71 @@
                     marker.addListener('dragend', (e) => {
                         const newLat = e.latLng.lat();
                         const newLng = e.latLng.lng();
-                        this.formData.offices[officeIndex].latitude = newLat.toFixed(7);
-                        this.formData.offices[officeIndex].longitude = newLng.toFixed(7);
-                        infoWindow.setContent(this.getOfficeInfoWindowContent(officeIndex, newLat, newLng));
-                    });
-                },
-
-                getOfficeInfoWindowContent(index, lat, lng) {
-                    return `
-                                            <div class="marker-info-window" style="min-width: 200px;">
-                                                <h4 class="text-sm font-bold text-gray-800">Office ${index + 1}</h4>
-                                                <p class="text-xs text-gray-600 mt-1">
-                                                    Lat: ${lat.toFixed(7)}<br>
-                                                    Lng: ${lng.toFixed(7)}
-                                                </p>
-                                                <button onclick="window.clusterWizardInstance.deleteOfficeMarker(${index})" 
-                                                    class="mt-2 px-3 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600 transition">
-                                                    <i class="fa-solid fa-trash mr-1"></i> Hapus
-                                                </button>
-                                            </div>
-                                        `;
-                },
-
-                deleteOfficeMarker(index) {
-                    // Find marker with this index
-                    const markerObj = this.officeMarkers.find(m => m.index === index);
-                    if (markerObj) {
-                        markerObj.marker.setMap(null);
-                        this.officeMarkers = this.officeMarkers.filter(m => m.index !== index);
-                    }
-
-                    // Remove from offices array
-                    this.formData.offices.splice(index, 1);
-
-                    // Update remaining markers' indices
-                    this.officeMarkers.forEach((m, i) => {
-                        if (m.index > index) {
-                            m.index--;
+                        const office = this.formData.offices.find(o => o.id === markerId);
+                        if (office) {
+                            office.latitude = newLat.toFixed(7);
+                            office.longitude = newLng.toFixed(7);
+                            infoWindow.setContent(this.getOfficeInfoWindowContent(markerId, newLat, newLng));
                         }
                     });
+                },
+
+                getOfficeInfoWindowContent(markerId, lat, lng) {
+                    const officeIndex = this.formData.offices.findIndex(o => o.id === markerId);
+                    const officeNumber = officeIndex !== -1 ? officeIndex + 1 : '?';
+                    return '<div class="marker-info-window" style="min-width: 200px;">' +
+                        '<h4 class="text-sm font-bold text-gray-800">Office ' + officeNumber + '</h4>' +
+                        '<p class="text-xs text-gray-600 mt-1">' +
+                        'Lat: ' + lat.toFixed(7) + '<br>' +
+                        'Lng: ' + lng.toFixed(7) +
+                        '</p>' +
+                        '<button onclick="window.clusterWizardInstance.deleteOfficeMarker(' + markerId + ')" ' +
+                        'class="mt-2 px-3 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600 transition">' +
+                        '<i class="fa-solid fa-trash mr-1"></i> Hapus' +
+                        '</button>' +
+                        '</div>';
+                },
+
+                deleteOfficeMarker(markerId) {
+                    console.log('Deleting office marker:', markerId);
+                    console.log('Current markers:', this.officeMarkers.length);
+                    
+                    // Find marker object by ID
+                    const markerObj = this.officeMarkers.find(m => m.id === markerId);
+                    
+                    if (markerObj) {
+                        console.log('Found marker object:', markerObj);
+                        
+                        // IMPORTANT: Close and destroy info window FIRST
+                        if (markerObj.infoWindow) {
+                            markerObj.infoWindow.close();
+                            markerObj.infoWindow.setMap(null);
+                            google.maps.event.clearInstanceListeners(markerObj.infoWindow);
+                        }
+                        
+                        // Remove ALL event listeners from marker
+                        if (markerObj.marker) {
+                            google.maps.event.clearInstanceListeners(markerObj.marker);
+                            
+                            // Set marker invisible first
+                            markerObj.marker.setVisible(false);
+                            
+                            // Remove from map
+                            markerObj.marker.setMap(null);
+                            
+                            console.log('Marker removed from map');
+                        }
+                        
+                        // Remove from officeMarkers array
+                        this.officeMarkers = this.officeMarkers.filter(m => m.id !== markerId);
+                        console.log('Remaining markers:', this.officeMarkers.length);
+                    } else {
+                        console.error('Marker not found with ID:', markerId);
+                        return; // Exit early if marker not found
+                    }
+
+                    // Remove from formData offices array
+                    this.formData.offices = this.formData.offices.filter(o => o.id !== markerId);
                 },
 
                 clearAllOfficeMarkers() {
@@ -539,14 +620,55 @@
                         return;
                     }
 
-                    const defaultCenter = { lat: -6.200000, lng: 106.816666 };
+                    // Use first office location as center if available, otherwise default to Jakarta
+                    let mapCenter = { lat: -6.200000, lng: 106.816666 };
+                    let initialZoom = 13;
+
+                    if (this.formData.offices.length > 0) {
+                        const firstOffice = this.formData.offices[0];
+                        mapCenter = {
+                            lat: parseFloat(firstOffice.latitude),
+                            lng: parseFloat(firstOffice.longitude)
+                        };
+                        initialZoom = 15; // Zoom in closer since we have a reference point
+                    }
 
                     this.patrolMap = new google.maps.Map(mapElement, {
-                        center: defaultCenter,
-                        zoom: 13,
+                        center: mapCenter,
+                        zoom: initialZoom,
                         mapTypeControl: true,
                         streetViewControl: false,
-                        fullscreenControl: true
+                        fullscreenControl: true,
+                        zoomControl: true,
+                        mapTypeControlOptions: {
+                            style: google.maps.MapTypeControlStyle.DROPDOWN_MENU,
+                            position: google.maps.ControlPosition.TOP_RIGHT
+                        }
+                    });
+
+                    // Add office marker(s) as reference points (non-draggable, semi-transparent)
+                    this.formData.offices.forEach((office, idx) => {
+                        const officeRefIcon = {
+                            path: 'M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z',
+                            fillColor: '#f97316',
+                            fillOpacity: 0.4,
+                            strokeWeight: 1.5,
+                            strokeColor: '#ea580c',
+                            scale: 1.4,
+                            anchor: new google.maps.Point(12, 22)
+                        };
+
+                        new google.maps.Marker({
+                            position: {
+                                lat: parseFloat(office.latitude),
+                                lng: parseFloat(office.longitude)
+                            },
+                            map: this.patrolMap,
+                            icon: officeRefIcon,
+                            title: `Office ${idx + 1} (Reference)`,
+                            opacity: 0.6,
+                            optimized: false
+                        });
                     });
 
                     // Click to add patrol marker
@@ -558,39 +680,55 @@
                 },
 
                 addPatrolMarker(lat, lng) {
-                    const markerIndex = this.patrolMarkers.length;
-                    const markerLabel = String(markerIndex + 1);
+                    const markerId = this.nextPatrolMarkerId++;
+                    const markerNumber = this.patrolMarkers.length + 1;
+
+                    // Create elegant location pin icon for patrol points
+                    const patrolIcon = {
+                        path: 'M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z',
+                        fillColor: '#ea580c',
+                        fillOpacity: 1,
+                        strokeWeight: 1.5,
+                        strokeColor: '#ffffff',
+                        scale: 1.6,
+                        anchor: new google.maps.Point(12, 22),
+                        labelOrigin: new google.maps.Point(12, 9)
+                    };
 
                     const marker = new google.maps.Marker({
                         position: { lat, lng },
                         map: this.patrolMap,
                         draggable: true,
                         animation: google.maps.Animation.DROP,
+                        icon: patrolIcon,
                         label: {
-                            text: markerLabel,
-                            color: 'white',
-                            fontWeight: 'bold'
+                            text: String(markerNumber),
+                            color: '#ffffff',
+                            fontWeight: 'bold',
+                            fontSize: '13px'
                         },
-                        icon: {
-                            url: 'http://maps.google.com/mapfiles/ms/icons/orange-dot.png',
-                            scaledSize: new google.maps.Size(40, 40)
-                        }
+                        title: `Patrol Point ${markerNumber}`,
+                        optimized: false
                     });
 
-                    // Store marker
-                    this.patrolMarkers.push({
+                    // Store marker with unique ID
+                    const markerObj = {
+                        id: markerId,
                         marker: marker,
                         lat: lat,
-                        lng: lng
-                    });
+                        lng: lng,
+                        infoWindow: null
+                    };
+                    this.patrolMarkers.push(markerObj);
 
                     // Update formData
                     this.updatePatrolPinpoints();
 
                     // Info window
                     const infoWindow = new google.maps.InfoWindow({
-                        content: this.getPatrolInfoWindowContent(markerIndex, lat, lng)
+                        content: this.getPatrolInfoWindowContent(markerId, lat, lng)
                     });
+                    markerObj.infoWindow = infoWindow;
 
                     marker.addListener('click', () => {
                         infoWindow.open(this.patrolMap, marker);
@@ -600,42 +738,75 @@
                     marker.addListener('dragend', (e) => {
                         const newLat = e.latLng.lat();
                         const newLng = e.latLng.lng();
-                        this.patrolMarkers[markerIndex].lat = newLat;
-                        this.patrolMarkers[markerIndex].lng = newLng;
+                        markerObj.lat = newLat;
+                        markerObj.lng = newLng;
                         this.updatePatrolPinpoints();
-                        infoWindow.setContent(this.getPatrolInfoWindowContent(markerIndex, newLat, newLng));
+                        infoWindow.setContent(this.getPatrolInfoWindowContent(markerId, newLat, newLng));
                     });
                 },
 
-                getPatrolInfoWindowContent(index, lat, lng) {
-                    return `
-                                            <div class="marker-info-window" style="min-width: 200px;">
-                                                <h4 class="text-sm font-bold text-gray-800">Patrol Point ${index + 1}</h4>
-                                                <p class="text-xs text-gray-600 mt-1">
-                                                    Lat: ${lat.toFixed(7)}<br>
-                                                    Lng: ${lng.toFixed(7)}
-                                                </p>
-                                                <button onclick="window.clusterWizardInstance.deletePatrolMarker(${index})" 
-                                                    class="mt-2 px-3 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600 transition">
-                                                    <i class="fa-solid fa-trash mr-1"></i> Hapus
-                                                </button>
-                                            </div>
-                                        `;
+                getPatrolInfoWindowContent(markerId, lat, lng) {
+                    const markerIndex = this.patrolMarkers.findIndex(m => m.id === markerId);
+                    const markerNumber = markerIndex !== -1 ? markerIndex + 1 : '?';
+                    
+                    return '<div class="marker-info-window" style="min-width: 200px;">' +
+                        '<h4 class="text-sm font-bold text-gray-800">Patrol Point ' + markerNumber + '</h4>' +
+                        '<p class="text-xs text-gray-600 mt-1">' +
+                        'Lat: ' + lat.toFixed(7) + '<br>' +
+                        'Lng: ' + lng.toFixed(7) +
+                        '</p>' +
+                        '<button onclick="window.clusterWizardInstance.deletePatrolMarker(' + markerId + ')" ' +
+                        'class="mt-2 px-3 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600 transition">' +
+                        '<i class="fa-solid fa-trash mr-1"></i> Hapus' +
+                        '</button>' +
+                        '</div>';
                 },
 
-                deletePatrolMarker(index) {
-                    // Remove marker from map
-                    if (this.patrolMarkers[index]) {
-                        this.patrolMarkers[index].marker.setMap(null);
-                        this.patrolMarkers.splice(index, 1);
+                deletePatrolMarker(markerId) {
+                    console.log('Deleting patrol marker ID:', markerId);
+                    console.log('Current patrol markers:', this.patrolMarkers.length);
+                    
+                    // Find marker by ID
+                    const markerObj = this.patrolMarkers.find(m => m.id === markerId);
+                    
+                    if (markerObj) {
+                        console.log('Found patrol marker:', markerObj);
+                        
+                        // IMPORTANT: Close and destroy info window FIRST
+                        if (markerObj.infoWindow) {
+                            markerObj.infoWindow.close();
+                            markerObj.infoWindow.setMap(null);
+                            google.maps.event.clearInstanceListeners(markerObj.infoWindow);
+                        }
+                        
+                        // Remove ALL event listeners from marker
+                        if (markerObj.marker) {
+                            google.maps.event.clearInstanceListeners(markerObj.marker);
+                            
+                            // Set marker invisible first
+                            markerObj.marker.setVisible(false);
+                            
+                            // Remove from map
+                            markerObj.marker.setMap(null);
+                            
+                            console.log('Marker removed from map');
+                        }
+                        
+                        // Remove from array
+                        this.patrolMarkers = this.patrolMarkers.filter(m => m.id !== markerId);
+                        console.log('Patrol marker removed, remaining:', this.patrolMarkers.length);
+                    } else {
+                        console.error('Patrol marker not found with ID:', markerId);
+                        return; // Exit early if marker not found
                     }
 
-                    // Re-label remaining markers
+                    // Re-number remaining markers
                     this.patrolMarkers.forEach((m, i) => {
                         m.marker.setLabel({
                             text: String(i + 1),
-                            color: 'white',
-                            fontWeight: 'bold'
+                            color: '#ffffff',
+                            fontWeight: 'bold',
+                            fontSize: '13px'
                         });
                     });
 

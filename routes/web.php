@@ -11,6 +11,10 @@ use App\Http\Controllers\Admin\FinanceSettlementController;
 use App\Http\Controllers\Admin\ClusterSubscriptionController;
 use App\Http\Controllers\Admin\DeviceManagementController;
 use App\Http\Controllers\Admin\DeviceTrackingController;
+use App\Http\Controllers\Admin\MarketingController;
+use App\Http\Controllers\Admin\MarketingMappingController;
+use App\Http\Controllers\Admin\CommissionSettingController;
+use App\Http\Controllers\Admin\RevenueReportController;
 
 Route::get('/', function () {
     if (Auth::check()) {
@@ -69,6 +73,21 @@ Route::middleware('auth')->group(function () {
             Route::resource('device-management', DeviceManagementController::class)->parameters([
                 'device-management' => 'device'
             ]);
+        });
+
+        // Affiliate Management Routes
+        Route::prefix('affiliate')->name('affiliate.')->group(function () {
+            // Marketing CRUD Routes
+            Route::resource('marketing', MarketingController::class);
+
+            // Marketing Cluster Mapping Routes
+            Route::resource('mapping', MarketingMappingController::class);
+
+            // Commission Settings Routes
+            Route::resource('commission', CommissionSettingController::class);
+
+            // Revenue Report Routes
+            Route::get('/revenue', [RevenueReportController::class, 'index'])->name('revenue.index');
         });
     });
 });
