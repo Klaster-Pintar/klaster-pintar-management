@@ -1,163 +1,214 @@
-@extends('layouts.admin')
+@extends('layouts.app')
 
-@section('title', 'Tambah Marketing')
+@section('title', 'Tambah Marketing - iManagement')
 
 @section('content')
-    <div class="container-fluid py-4">
-        <div class="row justify-content-center">
-            <div class="col-lg-8">
-                <!-- Header -->
-                <div class="d-flex align-items-center mb-4">
-                    <a href="{{ route('admin.affiliate.marketing.index') }}" class="btn btn-outline-secondary me-3">
-                        <i class="fas fa-arrow-left"></i>
-                    </a>
-                    <div>
-                        <h1 class="h3 mb-0 fw-bold">Tambah Marketing Baru</h1>
-                        <p class="text-muted mb-0">Tambahkan data marketing & affiliate baru</p>
-                    </div>
-                </div>
+    <div class="flex min-h-screen bg-gradient-to-br from-gray-50 to-blue-50" x-data="{ sidebarOpen: false }">
+        <!-- Overlay for mobile -->
+        <div x-show="sidebarOpen" @click="sidebarOpen = false" class="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+            x-transition:enter="transition-opacity ease-linear duration-300" x-transition:enter-start="opacity-0"
+            x-transition:enter-end="opacity-100" x-transition:leave="transition-opacity ease-linear duration-300"
+            x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"></div>
 
-                <!-- Form Card -->
-                <div class="card border-0 shadow-sm">
-                    <div class="card-header bg-white py-3">
-                        <h6 class="mb-0 fw-bold text-primary">
-                            <i class="fas fa-user-plus me-2"></i>Informasi Marketing
-                        </h6>
+        <!-- Sidebar Component -->
+        <x-admin.sidebar activeMenu="affiliate.marketing" />
+
+        <!-- Main Wrapper -->
+        <div class="flex-1 lg:ml-64 flex flex-col min-h-screen">
+            <!-- Header Component -->
+            <x-admin.header />
+
+            <!-- Main Content -->
+            <main class="flex-1 overflow-y-auto p-4 lg:p-6">
+                <div class="max-w-4xl mx-auto space-y-4">
+                    <!-- Page Header -->
+                    <div class="bg-white rounded-xl shadow-lg p-4 lg:p-6">
+                        <div class="flex items-center gap-3">
+                            <a href="{{ route('admin.affiliate.marketing.index') }}"
+                                class="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors">
+                                <i class="fa-solid fa-arrow-left text-gray-600"></i>
+                            </a>
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 lg:w-12 lg:h-12 rounded-xl bg-blue-100 flex items-center justify-center shrink-0">
+                                    <i class="fa-solid fa-user-plus text-blue-600 text-lg lg:text-xl"></i>
+                                </div>
+                                <div>
+                                    <h2 class="text-xl lg:text-2xl font-bold text-gray-800">Tambah Marketing Baru</h2>
+                                    <p class="text-gray-600 text-xs lg:text-sm mt-0.5">Tambahkan data marketing & affiliate baru</p>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <div class="card-body p-4">
-                        <form action="{{ route('admin.affiliate.marketing.store') }}" method="POST">
+
+                    <!-- Form Card -->
+                    <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+                        <div class="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-4">
+                            <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                                <i class="fa-solid fa-circle-info"></i>
+                                <span>Informasi Marketing</span>
+                            </h3>
+                        </div>
+
+                        <form action="{{ route('admin.affiliate.marketing.store') }}" method="POST" class="p-6">
                             @csrf
 
-                            <div class="row g-3">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6">
                                 <!-- Nama Lengkap -->
-                                <div class="col-md-6">
-                                    <label for="name" class="form-label fw-bold">
-                                        Nama Lengkap <span class="text-danger">*</span>
+                                <div class="md:col-span-2">
+                                    <label for="name" class="block text-sm font-semibold text-gray-700 mb-2">
+                                        <i class="fa-solid fa-user mr-1 text-blue-600"></i> Nama Lengkap
+                                        <span class="text-red-500">*</span>
                                     </label>
-                                    <input type="text" class="form-control @error('name') is-invalid @enderror" id="name"
-                                        name="name" value="{{ old('name') }}" required>
+                                    <input type="text"
+                                        class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition @error('name') border-red-500 @enderror"
+                                        id="name" name="name" value="{{ old('name') }}" required
+                                        placeholder="Masukkan nama lengkap">
                                     @error('name')
-                                        <div class="invalid-feedback">{{ $message }}</div>
+                                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                                     @enderror
                                 </div>
 
                                 <!-- No Telepon -->
-                                <div class="col-md-6">
-                                    <label for="phone" class="form-label fw-bold">
-                                        No Telepon <span class="text-danger">*</span>
+                                <div>
+                                    <label for="phone" class="block text-sm font-semibold text-gray-700 mb-2">
+                                        <i class="fa-solid fa-phone mr-1 text-blue-600"></i> No Telepon
+                                        <span class="text-red-500">*</span>
                                     </label>
-                                    <input type="text" class="form-control @error('phone') is-invalid @enderror" id="phone"
-                                        name="phone" value="{{ old('phone') }}" required>
+                                    <input type="text"
+                                        class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition @error('phone') border-red-500 @enderror"
+                                        id="phone" name="phone" value="{{ old('phone') }}" required
+                                        placeholder="08xxxxxxxxxx">
                                     @error('phone')
-                                        <div class="invalid-feedback">{{ $message }}</div>
+                                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                                     @enderror
                                 </div>
 
                                 <!-- Email -->
-                                <div class="col-md-6">
-                                    <label for="email" class="form-label fw-bold">
-                                        Email <span class="text-danger">*</span>
+                                <div>
+                                    <label for="email" class="block text-sm font-semibold text-gray-700 mb-2">
+                                        <i class="fa-solid fa-envelope mr-1 text-blue-600"></i> Email
+                                        <span class="text-red-500">*</span>
                                     </label>
-                                    <input type="email" class="form-control @error('email') is-invalid @enderror" id="email"
-                                        name="email" value="{{ old('email') }}" required>
+                                    <input type="email"
+                                        class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition @error('email') border-red-500 @enderror"
+                                        id="email" name="email" value="{{ old('email') }}" required
+                                        placeholder="email@example.com">
                                     @error('email')
-                                        <div class="invalid-feedback">{{ $message }}</div>
+                                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                                     @enderror
                                 </div>
 
                                 <!-- Cluster Affiliate Name -->
-                                <div class="col-md-6">
-                                    <label for="cluster_affiliate_name" class="form-label fw-bold">
-                                        Cluster Affiliate Name <span class="text-danger">*</span>
+                                <div>
+                                    <label for="cluster_affiliate_name" class="block text-sm font-semibold text-gray-700 mb-2">
+                                        <i class="fa-solid fa-building mr-1 text-blue-600"></i> Nama Cluster Affiliate
+                                        <span class="text-red-500">*</span>
                                     </label>
                                     <input type="text"
-                                        class="form-control @error('cluster_affiliate_name') is-invalid @enderror"
+                                        class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition @error('cluster_affiliate_name') border-red-500 @enderror"
                                         id="cluster_affiliate_name" name="cluster_affiliate_name"
-                                        value="{{ old('cluster_affiliate_name') }}" required>
+                                        value="{{ old('cluster_affiliate_name') }}" required
+                                        placeholder="Nama cluster affiliate">
                                     @error('cluster_affiliate_name')
-                                        <div class="invalid-feedback">{{ $message }}</div>
+                                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                                     @enderror
                                 </div>
 
                                 <!-- No KTP -->
-                                <div class="col-md-6">
-                                    <label for="id_card_number" class="form-label fw-bold">
-                                        No KTP/Identitas
+                                <div>
+                                    <label for="id_card_number" class="block text-sm font-semibold text-gray-700 mb-2">
+                                        <i class="fa-solid fa-id-card mr-1 text-blue-600"></i> No KTP/Identitas
                                     </label>
-                                    <input type="text" class="form-control @error('id_card_number') is-invalid @enderror"
-                                        id="id_card_number" name="id_card_number" value="{{ old('id_card_number') }}">
+                                    <input type="text"
+                                        class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition @error('id_card_number') border-red-500 @enderror"
+                                        id="id_card_number" name="id_card_number" value="{{ old('id_card_number') }}"
+                                        placeholder="3201xxxxxxxxxxxxxx">
                                     @error('id_card_number')
-                                        <div class="invalid-feedback">{{ $message }}</div>
+                                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                                     @enderror
                                 </div>
 
                                 <!-- Join Date -->
-                                <div class="col-md-6">
-                                    <label for="join_date" class="form-label fw-bold">
-                                        Tanggal Bergabung <span class="text-danger">*</span>
+                                <div>
+                                    <label for="join_date" class="block text-sm font-semibold text-gray-700 mb-2">
+                                        <i class="fa-solid fa-calendar-days mr-1 text-blue-600"></i> Tanggal Bergabung
+                                        <span class="text-red-500">*</span>
                                     </label>
-                                    <input type="date" class="form-control @error('join_date') is-invalid @enderror"
-                                        id="join_date" name="join_date" value="{{ old('join_date', date('Y-m-d')) }}"
-                                        required>
+                                    <input type="date"
+                                        class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition @error('join_date') border-red-500 @enderror"
+                                        id="join_date" name="join_date" value="{{ old('join_date', date('Y-m-d')) }}" required>
                                     @error('join_date')
-                                        <div class="invalid-feedback">{{ $message }}</div>
+                                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                                     @enderror
                                 </div>
 
                                 <!-- Status -->
-                                <div class="col-md-6">
-                                    <label for="status" class="form-label fw-bold">
-                                        Status <span class="text-danger">*</span>
+                                <div>
+                                    <label for="status" class="block text-sm font-semibold text-gray-700 mb-2">
+                                        <i class="fa-solid fa-toggle-on mr-1 text-blue-600"></i> Status
+                                        <span class="text-red-500">*</span>
                                     </label>
-                                    <select class="form-select @error('status') is-invalid @enderror" id="status"
-                                        name="status" required>
-                                        <option value="Active" {{ old('status') === 'Active' ? 'selected' : '' }}>Active
-                                        </option>
-                                        <option value="Inactive" {{ old('status') === 'Inactive' ? 'selected' : '' }}>Inactive
-                                        </option>
-                                        <option value="Suspended" {{ old('status') === 'Suspended' ? 'selected' : '' }}>
-                                            Suspended</option>
+                                    <select
+                                        class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition @error('status') border-red-500 @enderror"
+                                        id="status" name="status" required>
+                                        <option value="Active" {{ old('status', 'Active') === 'Active' ? 'selected' : '' }}>Active</option>
+                                        <option value="Inactive" {{ old('status') === 'Inactive' ? 'selected' : '' }}>Inactive</option>
+                                        <option value="Suspended" {{ old('status') === 'Suspended' ? 'selected' : '' }}>Suspended</option>
                                     </select>
                                     @error('status')
-                                        <div class="invalid-feedback">{{ $message }}</div>
+                                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                                     @enderror
                                 </div>
 
                                 <!-- Alamat -->
-                                <div class="col-12">
-                                    <label for="address" class="form-label fw-bold">
-                                        Alamat Lengkap
+                                <div class="md:col-span-2">
+                                    <label for="address" class="block text-sm font-semibold text-gray-700 mb-2">
+                                        <i class="fa-solid fa-location-dot mr-1 text-blue-600"></i> Alamat Lengkap
                                     </label>
-                                    <textarea class="form-control @error('address') is-invalid @enderror" id="address"
-                                        name="address" rows="3">{{ old('address') }}</textarea>
+                                    <textarea
+                                        class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition @error('address') border-red-500 @enderror"
+                                        id="address" name="address" rows="3" placeholder="Masukkan alamat lengkap">{{ old('address') }}</textarea>
                                     @error('address')
-                                        <div class="invalid-feedback">{{ $message }}</div>
+                                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                                     @enderror
                                 </div>
 
                                 <!-- Info Box -->
-                                <div class="col-12">
-                                    <div class="alert alert-info">
-                                        <i class="fas fa-info-circle me-2"></i>
-                                        <strong>Info:</strong> Kode Referral akan di-generate secara otomatis saat data
-                                        disimpan.
+                                <div class="md:col-span-2">
+                                    <div class="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-lg">
+                                        <div class="flex items-start gap-3">
+                                            <i class="fa-solid fa-circle-info text-blue-600 text-xl mt-0.5"></i>
+                                            <div>
+                                                <p class="text-sm font-semibold text-blue-900">Informasi</p>
+                                                <p class="text-sm text-blue-800 mt-1">
+                                                    Kode Referral akan di-generate secara otomatis saat data disimpan.
+                                                </p>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
 
                             <!-- Action Buttons -->
-                            <div class="d-flex justify-content-end gap-2 mt-4">
-                                <a href="{{ route('admin.affiliate.marketing.index') }}" class="btn btn-outline-secondary">
-                                    <i class="fas fa-times me-2"></i>Batal
+                            <div class="flex flex-col sm:flex-row gap-3 justify-end mt-6 pt-6 border-t border-gray-200">
+                                <a href="{{ route('admin.affiliate.marketing.index') }}"
+                                    class="inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-semibold">
+                                    <i class="fa-solid fa-times"></i>
+                                    <span>Batal</span>
                                 </a>
-                                <button type="submit" class="btn btn-primary">
-                                    <i class="fas fa-save me-2"></i>Simpan Marketing
+                                <button type="submit"
+                                    class="inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:shadow-lg transition-all font-semibold">
+                                    <i class="fa-solid fa-save"></i>
+                                    <span>Simpan Marketing</span>
                                 </button>
                             </div>
                         </form>
                     </div>
                 </div>
-            </div>
+            </main>
+
+            <!-- Footer Component -->
+            <x-admin.footer />
         </div>
     </div>
 @endsection

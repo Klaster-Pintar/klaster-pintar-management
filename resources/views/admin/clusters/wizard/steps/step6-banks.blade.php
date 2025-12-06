@@ -4,10 +4,19 @@
             <i class="fa-solid fa-building-columns text-emerald-600"></i>
             <span>Rekening Bank Cluster</span>
         </h3>
-        <p class="text-sm text-gray-600 mt-1">Tambahkan rekening bank untuk transaksi cluster (minimal 1)</p>
+        <p class="text-sm text-gray-600 mt-1">Tambahkan rekening bank untuk transaksi cluster (opsional)</p>
     </div>
 
     <div class="space-y-4">
+        <!-- Empty State -->
+        <div x-show="formData.bank_accounts.length === 0" 
+            class="bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+            <i class="fa-solid fa-building-columns text-gray-400 text-4xl mb-3"></i>
+            <p class="text-gray-600 font-semibold mb-2">Belum ada rekening bank ditambahkan</p>
+            <p class="text-gray-500 text-sm mb-4">Klik tombol di bawah untuk menambahkan rekening bank</p>
+        </div>
+
+        <!-- Bank Account List -->
         <template x-for="(bank, index) in formData.bank_accounts" :key="index">
             <div class="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
                 <div class="flex items-center justify-between mb-4">
@@ -25,9 +34,9 @@
                     <!-- Bank Type/Name -->
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-2">
-                            Nama Bank <span class="text-red-500">*</span>
+                            Nama Bank
                         </label>
-                        <select :name="'bank_accounts['+index+'][bank_type]'" x-model="bank.bank_type" required
+                        <select :name="'bank_accounts['+index+'][bank_type]'" x-model="bank.bank_type"
                             class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition">
                             <option value="BCA">BCA</option>
                             <option value="BRI">BRI</option>
@@ -45,10 +54,10 @@
                     <!-- Bank Code -->
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-2">
-                            Kode Bank <span class="text-red-500">*</span>
+                            Kode Bank
                         </label>
                         <input type="number" :name="'bank_accounts['+index+'][bank_code_id]'"
-                            x-model="bank.bank_code_id" required
+                            x-model="bank.bank_code_id"
                             class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition"
                             placeholder="014 (BCA), 002 (BRI), dst">
                     </div>
@@ -56,10 +65,10 @@
                     <!-- Account Number -->
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-2">
-                            No. Rekening <span class="text-red-500">*</span>
+                            No. Rekening
                         </label>
                         <input type="text" :name="'bank_accounts['+index+'][account_number]'"
-                            x-model="bank.account_number" required
+                            x-model="bank.account_number"
                             class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition"
                             placeholder="1234567890">
                     </div>
@@ -67,10 +76,10 @@
                     <!-- Account Holder -->
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-2">
-                            Nama Pemilik Rekening <span class="text-red-500">*</span>
+                            Nama Pemilik Rekening
                         </label>
                         <input type="text" :name="'bank_accounts['+index+'][account_holder]'"
-                            x-model="bank.account_holder" required
+                            x-model="bank.account_holder"
                             class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition"
                             placeholder="Sesuai rekening bank">
                     </div>

@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\StoreClusterRequest;
+use App\Services\ClusterService;
 use App\Models\Cluster;
 use App\Models\ClusterOffice;
 use App\Models\ClusterPatrol;
@@ -10,6 +12,10 @@ use App\Models\ClusterEmployee;
 use App\Models\ClusterSecurity;
 use App\Models\ClusterBankAccount;
 use App\Models\ClusterResident;
+use App\Models\ClusterSubscription;
+use App\Models\ClusterBalanceWithdraw;
+use App\Models\IoTDevice;
+use App\Models\MarketingCluster;
 use App\Models\Resident;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -25,7 +31,7 @@ class ClusterController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Cluster::query()->with(['offices', 'employees', 'securities']);
+        $query = Cluster::query();
 
         // Search functionality
         if ($request->filled('search')) {
@@ -53,6 +59,54 @@ class ClusterController extends Controller
     public function create()
     {
         return view('admin.clusters.wizard.index');
+    }
+
+    /**
+     * Store cluster data from wizard with Service Layer
+     * Using Database Transaction for data integrity
+     */
+    public function storeWizard(StoreClusterRequest $request, ClusterService $clusterService)
+    {
+        try {
+            // Handle file uploads
+            $data = $request->validated();
+            
+            if ($request->hasFile('logo')) {
+                $data['logo_path'] = $clusterService->handleFileUpload($request->file('logo'), 'clusters/logos');
+            }
+            
+            if ($request->hasFile('picture')) {
+                $data['picture_path'] = $clusterService->handleFileUpload($request->file('picture'), 'clusters/pictures');
+            }
+
+            // Store cluster with all related data using Service
+            $result = $clusterService->storeCluster($data);
+
+            return response()->json([
+                'success' => true,
+                'message' => $result['message'],
+                'data' => $result['data'],
+                'redirect' => route('admin.clusters.show', $result['data']['cluster_id'])
+            ], 201);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validasi gagal',
+                'errors' => $e->errors()
+            ], 422);
+
+        } catch (\Exception $e) {
+            \Log::error('Failed to create cluster: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Terjadi kesalahan saat menyimpan data cluster',
+                'error' => config('app.debug') ? $e->getMessage() : 'Internal server error'
+            ], 500);
+        }
     }
 
     /**
@@ -384,16 +438,66 @@ class ClusterController extends Controller
     }
 
     /**
-     * Remove cluster
+     * Remove cluster with cascade delete
      */
     public function destroy(Cluster $cluster)
     {
-        $cluster->deleted_id = Auth::id();
-        $cluster->save();
-        $cluster->delete();
+        try {
+            DB::beginTransaction();
 
-        return redirect()->route('admin.clusters.index')
-            ->with('success', 'Cluster berhasil dihapus!');
+            // Set deleted_id before deletion
+            $cluster->deleted_id = Auth::id();
+            $cluster->save();
+
+            // Get cluster ID for related data deletion
+            $clusterId = $cluster->id;
+            $clusterName = $cluster->name;
+
+            // Delete related data in sequence (cascade delete)
+            // 1. Delete IoT Devices
+            IoTDevice::where('cluster_id', $clusterId)->delete();
+
+            // 2. Delete Cluster Residents
+            ClusterResident::where('ihm_m_clusters_id', $clusterId)->delete();
+
+            // 3. Delete Cluster Subscriptions
+            ClusterSubscription::where('cluster_id', $clusterId)->delete();
+
+            // 4. Delete Cluster Balance Withdraws
+            ClusterBalanceWithdraw::where('ihm_m_clusters_id', $clusterId)->delete();
+
+            // 5. Delete Cluster Bank Accounts
+            ClusterBankAccount::where('ihm_m_clusters_id', $clusterId)->delete();
+
+            // 6. Delete Cluster Securities
+            ClusterSecurity::where('ihm_m_clusters_id', $clusterId)->delete();
+
+            // 7. Delete Cluster Employees
+            ClusterEmployee::where('ihm_m_clusters_id', $clusterId)->delete();
+
+            // 8. Delete Cluster Patrols
+            ClusterPatrol::where('ihm_m_clusters_id', $clusterId)->delete();
+
+            // 9. Delete Cluster Offices
+            ClusterOffice::where('ihm_m_clusters_id', $clusterId)->delete();
+
+            // 10. Delete Marketing Cluster relationships
+            MarketingCluster::where('cluster_id', $clusterId)->delete();
+
+            // 11. Finally, delete the cluster itself (soft delete)
+            $cluster->delete();
+
+            DB::commit();
+
+            return redirect()->route('admin.clusters.index')
+                ->with('success', "Cluster '{$clusterName}' beserta semua data terkait berhasil dihapus!");
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            
+            return redirect()->route('admin.clusters.index')
+                ->with('error', 'Gagal menghapus cluster: ' . $e->getMessage());
+        }
     }
 
     /**
@@ -581,5 +685,835 @@ class ClusterController extends Controller
             'security_id' => $userId,
             'created_id' => $createdById,
         ]);
+    }
+
+    /**
+     * Download CSV template for residents
+     */
+    public function downloadResidentTemplate()
+    {
+        $filename = 'template_data_warga.csv';
+        $headers = [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => "attachment; filename=\"$filename\"",
+        ];
+
+        $columns = ['block_number', 'name', 'email', 'phone'];
+        $sampleData = [
+            ['A-01', 'John Doe', 'john@example.com', '08123456789'],
+            ['A-02', 'Jane Smith', 'jane@example.com', '08123456788'],
+            ['B-01', 'Bob Wilson', 'bob@example.com', '08123456787'],
+        ];
+
+        $callback = function() use ($columns, $sampleData) {
+            $file = fopen('php://output', 'w');
+            fputcsv($file, $columns);
+            foreach ($sampleData as $row) {
+                fputcsv($file, $row);
+            }
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
+
+    /**
+     * Upload and import residents from CSV/Excel
+     */
+    public function uploadResidents(Request $request, $clusterId)
+    {
+        try {
+            $request->validate([
+                'resident_file' => 'required|file|mimes:csv,xlsx,xls|max:5120', // 5MB
+            ]);
+
+            $file = $request->file('resident_file');
+            $extension = $file->getClientOriginalExtension();
+            
+            $residents = [];
+            $errors = [];
+            $row = 1;
+
+            if ($extension === 'csv') {
+                // Parse CSV
+                $handle = fopen($file->getRealPath(), 'r');
+                $header = fgetcsv($handle); // Skip header
+                
+                while (($data = fgetcsv($handle)) !== false) {
+                    $row++;
+                    
+                    if (count($data) < 4) {
+                        $errors[] = "Baris $row: Data tidak lengkap (harus ada 4 kolom)";
+                        continue;
+                    }
+
+                    $residents[] = [
+                        'block_number' => trim($data[0]),
+                        'name' => trim($data[1]),
+                        'email' => trim($data[2]),
+                        'phone' => trim($data[3]),
+                    ];
+                }
+                fclose($handle);
+                
+            } else {
+                // Parse Excel using PhpSpreadsheet
+                require_once base_path('vendor/autoload.php');
+                
+                try {
+                    $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($file->getRealPath());
+                    $worksheet = $spreadsheet->getActiveSheet();
+                    $highestRow = $worksheet->getHighestRow();
+                    
+                    for ($i = 2; $i <= $highestRow; $i++) {
+                        $blockNumber = $worksheet->getCell("A$i")->getValue();
+                        $name = $worksheet->getCell("B$i")->getValue();
+                        $email = $worksheet->getCell("C$i")->getValue();
+                        $phone = $worksheet->getCell("D$i")->getValue();
+                        
+                        if (empty($blockNumber) && empty($name)) {
+                            continue; // Skip empty rows
+                        }
+
+                        $residents[] = [
+                            'block_number' => trim($blockNumber),
+                            'name' => trim($name),
+                            'email' => trim($email),
+                            'phone' => trim($phone),
+                        ];
+                    }
+                } catch (\Exception $e) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Gagal membaca file Excel: ' . $e->getMessage()
+                    ], 422);
+                }
+            }
+
+            if (empty($residents) && empty($errors)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'File kosong atau tidak ada data valid'
+                ], 422);
+            }
+
+            // Validate and import
+            DB::beginTransaction();
+            try {
+                $imported = 0;
+                $userId = auth()->id() ?? 1;
+
+                foreach ($residents as $idx => $residentData) {
+                    // Validation
+                    if (empty($residentData['name'])) {
+                        $errors[] = "Baris " . ($idx + 2) . ": Nama warga tidak boleh kosong";
+                        continue;
+                    }
+
+                    // Create or find resident in ihm_m_residents
+                    $resident = \App\Models\Resident::firstOrCreate(
+                        ['username' => strtolower(str_replace(' ', '.', $residentData['name']))],
+                        [
+                            'name' => $residentData['name'],
+                            'email' => $residentData['email'],
+                            'phone' => $residentData['phone'],
+                            'house_block' => $residentData['block_number'],
+                            'password' => Hash::make('password123'),
+                            'role' => 'RESIDENT',
+                            'status' => 'PENDING',
+                            'active_flag' => true,
+                            'created_id' => $userId,
+                        ]
+                    );
+
+                    // Link to cluster
+                    $existing = \App\Models\ClusterResident::where('ihm_m_clusters_id', $clusterId)
+                        ->where('resident_id', $resident->id)
+                        ->whereNull('deleted_at')
+                        ->first();
+
+                    if (!$existing) {
+                        \App\Models\ClusterResident::create([
+                            'ihm_m_clusters_id' => $clusterId,
+                            'resident_id' => $resident->id,
+                            'created_id' => $userId,
+                        ]);
+                        $imported++;
+                    }
+                }
+
+                DB::commit();
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Data warga berhasil diimport',
+                    'data' => [
+                        'total_imported' => $imported,
+                        'total_errors' => count($errors),
+                    ],
+                    'errors' => $errors
+                ]);
+
+            } catch (\Exception $e) {
+                DB::rollBack();
+                \Log::error('Failed to import residents: ' . $e->getMessage());
+                
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Gagal menyimpan data: ' . $e->getMessage()
+                ], 500);
+            }
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'File tidak valid',
+                'errors' => $e->errors()
+            ], 422);
+        }
+    }
+
+    // ==================== UPDATE BASIC INFO ====================
+    
+    /**
+     * Update basic cluster information
+     */
+    public function updateBasicInfo(Request $request, Cluster $cluster)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'phone' => 'required|string|max:20',
+            'email' => 'required|email|max:255',
+            'radius_checkin' => 'nullable|integer|min:1|max:1000',
+            'radius_patrol' => 'nullable|integer|min:1|max:1000',
+            'active_flag' => 'required|boolean',
+        ]);
+
+        try {
+            $cluster->update($validated);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Informasi cluster berhasil diupdate'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal mengupdate informasi cluster',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    // ==================== OFFICE CRUD ====================
+    
+    /**
+     * Store new office
+     */
+    public function storeOffice(Request $request, Cluster $cluster)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'type_id' => 'required|integer',
+            'latitude' => 'required|numeric|between:-90,90',
+            'longitude' => 'required|numeric|between:-180,180',
+            'active_flag' => 'required|boolean',
+        ]);
+
+        try {
+            // Create POINT geometry using raw SQL
+            DB::statement(
+                "INSERT INTO ihm_m_cluster_d_offices (ihm_m_clusters_id, name, type_id, location_point, active_flag, created_id, created_at, updated_at) 
+                 VALUES (?, ?, ?, POINT(?, ?), ?, ?, NOW(), NOW())",
+                [
+                    $cluster->id,
+                    $validated['name'],
+                    $validated['type_id'],
+                    $validated['longitude'],
+                    $validated['latitude'],
+                    $validated['active_flag'],
+                    Auth::id()
+                ]
+            );
+
+            $office = ClusterOffice::where('ihm_m_clusters_id', $cluster->id)
+                ->orderBy('id', 'desc')
+                ->first();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Kantor berhasil ditambahkan',
+                'data' => $office->fresh()
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal menambahkan kantor',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Update office
+     */
+    public function updateOffice(Request $request, Cluster $cluster, ClusterOffice $office)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'type_id' => 'required|integer',
+            'latitude' => 'required|numeric|between:-90,90',
+            'longitude' => 'required|numeric|between:-180,180',
+            'active_flag' => 'required|boolean',
+        ]);
+
+        try {
+            // Update using raw SQL for POINT geometry
+            DB::statement(
+                "UPDATE ihm_m_cluster_d_offices 
+                 SET name = ?, type_id = ?, location_point = POINT(?, ?), active_flag = ?, updated_id = ?, updated_at = NOW()
+                 WHERE id = ?",
+                [
+                    $validated['name'],
+                    $validated['type_id'],
+                    $validated['longitude'],
+                    $validated['latitude'],
+                    $validated['active_flag'],
+                    Auth::id(),
+                    $office->id
+                ]
+            );
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Kantor berhasil diupdate',
+                'data' => $office->fresh()
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal mengupdate kantor',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Delete office
+     */
+    public function deleteOffice(Cluster $cluster, ClusterOffice $office)
+    {
+        try {
+            $office->deleted_id = Auth::id();
+            $office->save();
+            $office->delete();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Kantor berhasil dihapus'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal menghapus kantor',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    // ==================== PATROL CRUD ====================
+    
+    /**
+     * Store new patrol
+     */
+    public function storePatrol(Request $request, Cluster $cluster)
+    {
+        $validated = $request->validate([
+            'day_type_id' => 'required|integer',
+            'pinpoints' => 'required|array|min:2',
+            'pinpoints.*.lat' => 'required|numeric|between:-90,90',
+            'pinpoints.*.lng' => 'required|numeric|between:-180,180',
+        ]);
+
+        try {
+            $patrol = new ClusterPatrol();
+            $patrol->ihm_m_clusters_id = $cluster->id;
+            $patrol->day_type_id = $validated['day_type_id'];
+            $patrol->pinpoints = json_encode($validated['pinpoints']);
+            $patrol->created_id = Auth::id();
+            $patrol->save();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Rute patroli berhasil ditambahkan',
+                'data' => $patrol
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal menambahkan rute patroli',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Update patrol
+     */
+    public function updatePatrol(Request $request, Cluster $cluster, ClusterPatrol $patrol)
+    {
+        $validated = $request->validate([
+            'day_type_id' => 'required|integer',
+            'pinpoints' => 'required|array|min:2',
+            'pinpoints.*.lat' => 'required|numeric|between:-90,90',
+            'pinpoints.*.lng' => 'required|numeric|between:-180,180',
+        ]);
+
+        try {
+            $patrol->day_type_id = $validated['day_type_id'];
+            $patrol->pinpoints = json_encode($validated['pinpoints']);
+            $patrol->updated_id = Auth::id();
+            $patrol->save();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Rute patroli berhasil diupdate',
+                'data' => $patrol
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal mengupdate rute patroli',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Delete patrol
+     */
+    public function deletePatrol(Cluster $cluster, ClusterPatrol $patrol)
+    {
+        try {
+            $patrol->deleted_id = Auth::id();
+            $patrol->save();
+            $patrol->delete();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Rute patroli berhasil dihapus'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal menghapus rute patroli',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    // ==================== BANK ACCOUNT CRUD ====================
+    
+    /**
+     * Store new bank account
+     */
+    public function storeBankAccount(Request $request, Cluster $cluster)
+    {
+        $validated = $request->validate([
+            'bank_type' => 'required|string|max:100',
+            'bank_code_id' => 'required|integer',
+            'account_holder' => 'required|string|max:255',
+            'account_number' => 'required|string|max:50',
+        ]);
+
+        try {
+            $bank = new ClusterBankAccount($validated);
+            $bank->ihm_m_clusters_id = $cluster->id;
+            $bank->created_id = Auth::id();
+            $bank->save();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Rekening bank berhasil ditambahkan',
+                'data' => $bank
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal menambahkan rekening bank',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Update bank account
+     */
+    public function updateBankAccount(Request $request, Cluster $cluster, ClusterBankAccount $bank)
+    {
+        $validated = $request->validate([
+            'bank_type' => 'required|string|max:100',
+            'bank_code_id' => 'required|integer',
+            'account_holder' => 'required|string|max:255',
+            'account_number' => 'required|string|max:50',
+        ]);
+
+        try {
+            $validated['updated_id'] = Auth::id();
+            $bank->update($validated);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Rekening bank berhasil diupdate',
+                'data' => $bank
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal mengupdate rekening bank',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Delete bank account
+     */
+    public function deleteBankAccount(Cluster $cluster, ClusterBankAccount $bank)
+    {
+        try {
+            $bank->deleted_id = Auth::id();
+            $bank->save();
+            $bank->delete();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Rekening bank berhasil dihapus'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal menghapus rekening bank',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    // ==================== EMPLOYEE CRUD ====================
+    
+    /**
+     * Store new employee
+     */
+    public function storeEmployee(Request $request, Cluster $cluster)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'username' => 'required|string|max:255|unique:ihm_m_users,username',
+            'email' => 'nullable|email|max:255',
+            'phone' => 'nullable|string|max:20',
+            'password' => 'required|string|min:8',
+            'role' => 'required|in:RT,RW,ADMIN',
+        ]);
+
+        DB::beginTransaction();
+        try {
+            // Create user
+            $user = new User();
+            $user->name = $validated['name'];
+            $user->username = $validated['username'];
+            $user->email = $validated['email'];
+            $user->phone = $validated['phone'];
+            $user->password = Hash::make($validated['password']);
+            $user->role = $validated['role'];
+            $user->status = 'ACTIVE';
+            $user->created_id = Auth::id();
+            $user->save();
+
+            // Link to cluster
+            $clusterEmployee = new ClusterEmployee();
+            $clusterEmployee->ihm_m_clusters_id = $cluster->id;
+            $clusterEmployee->employee_id = $user->id;
+            $clusterEmployee->created_id = Auth::id();
+            $clusterEmployee->save();
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Karyawan berhasil ditambahkan',
+                'data' => $clusterEmployee->load('employee')
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal menambahkan karyawan',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Update employee
+     */
+    public function updateEmployee(Request $request, Cluster $cluster, ClusterEmployee $employee)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'username' => 'required|string|max:255|unique:ihm_m_users,username,' . $employee->employee_id,
+            'email' => 'nullable|email|max:255',
+            'phone' => 'nullable|string|max:20',
+            'password' => 'nullable|string|min:8',
+            'role' => 'required|in:RT,RW,ADMIN',
+        ]);
+
+        try {
+            $user = $employee->employee;
+            $user->name = $validated['name'];
+            $user->username = $validated['username'];
+            $user->email = $validated['email'];
+            $user->phone = $validated['phone'];
+            $user->role = $validated['role'];
+            
+            if (!empty($validated['password'])) {
+                $user->password = Hash::make($validated['password']);
+            }
+            
+            $user->updated_id = Auth::id();
+            $user->save();
+
+            // Update cluster employee record
+            $employee->updated_id = Auth::id();
+            $employee->save();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Data karyawan berhasil diupdate',
+                'data' => $employee->load('employee')
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal mengupdate karyawan',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Delete employee
+     */
+    public function deleteEmployee(Cluster $cluster, ClusterEmployee $employee)
+    {
+        DB::beginTransaction();
+        try {
+            $user = $employee->employee;
+            
+            // Set audit field before soft delete
+            $employee->deleted_id = Auth::id();
+            $employee->save();
+            
+            $employee->delete();
+            
+            $user->deleted_id = Auth::id();
+            $user->save();
+            $user->delete();
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Karyawan berhasil dihapus'
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal menghapus karyawan',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    // ==================== SECURITY CRUD ====================
+    
+    /**
+     * Store new security
+     */
+    public function storeSecurity(Request $request, Cluster $cluster)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'username' => 'required|string|max:255|unique:ihm_m_users,username',
+            'email' => 'nullable|email|max:255',
+            'phone' => 'nullable|string|max:20',
+            'password' => 'required|string|min:8',
+        ]);
+
+        DB::beginTransaction();
+        try {
+            // Create user
+            $user = new User();
+            $user->name = $validated['name'];
+            $user->username = $validated['username'];
+            $user->email = $validated['email'];
+            $user->phone = $validated['phone'];
+            $user->password = Hash::make($validated['password']);
+            $user->role = 'SECURITY';
+            $user->status = 'ACTIVE';
+            $user->created_id = Auth::id();
+            $user->save();
+
+            // Link to cluster
+            $clusterSecurity = new ClusterSecurity();
+            $clusterSecurity->ihm_m_clusters_id = $cluster->id;
+            $clusterSecurity->security_id = $user->id;
+            $clusterSecurity->created_id = Auth::id();
+            $clusterSecurity->save();
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Security berhasil ditambahkan',
+                'data' => $clusterSecurity->load('security')
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal menambahkan security',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Update security
+     */
+    public function updateSecurity(Request $request, Cluster $cluster, ClusterSecurity $security)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'username' => 'required|string|max:255|unique:ihm_m_users,username,' . $security->security_id,
+            'email' => 'nullable|email|max:255',
+            'phone' => 'nullable|string|max:20',
+            'password' => 'nullable|string|min:8',
+        ]);
+
+        try {
+            $user = $security->security;
+            $user->name = $validated['name'];
+            $user->username = $validated['username'];
+            $user->email = $validated['email'];
+            $user->phone = $validated['phone'];
+            
+            if (!empty($validated['password'])) {
+                $user->password = Hash::make($validated['password']);
+            }
+            
+            $user->updated_id = Auth::id();
+            $user->save();
+
+            // Update cluster security record
+            $security->updated_id = Auth::id();
+            $security->save();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Data security berhasil diupdate',
+                'data' => $security->load('security')
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal mengupdate security',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Delete security
+     */
+    public function deleteSecurity(Cluster $cluster, ClusterSecurity $security)
+    {
+        DB::beginTransaction();
+        try {
+            $user = $security->security;
+            
+            // Set audit field before soft delete
+            $security->deleted_id = Auth::id();
+            $security->save();
+            
+            $security->delete();
+            
+            $user->deleted_id = Auth::id();
+            $user->save();
+            $user->delete();
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Security berhasil dihapus'
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal menghapus security',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Sync stakeholders count for all clusters
+     */
+    public function syncStakeholders()
+    {
+        try {
+            $clusters = Cluster::all();
+            $updatedCount = 0;
+
+            foreach ($clusters as $cluster) {
+                $employeesCount = ClusterEmployee::where('ihm_m_clusters_id', $cluster->id)
+                    ->whereNull('deleted_at')
+                    ->count();
+                
+                $securitiesCount = ClusterSecurity::where('ihm_m_clusters_id', $cluster->id)
+                    ->whereNull('deleted_at')
+                    ->count();
+                
+                $residentsCount = ClusterResident::where('ihm_m_clusters_id', $cluster->id)
+                    ->whereNull('deleted_at')
+                    ->count();
+
+                $cluster->update([
+                    'total_employees' => $employeesCount,
+                    'total_securities' => $securitiesCount,
+                    'total_residents' => $residentsCount,
+                    'updated_id' => Auth::id(),
+                ]);
+
+                $updatedCount++;
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => "Berhasil sinkronisasi {$updatedCount} cluster",
+                'data' => [
+                    'updated_count' => $updatedCount
+                ]
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal melakukan sinkronisasi',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 }

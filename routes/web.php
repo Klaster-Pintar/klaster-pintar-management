@@ -47,6 +47,39 @@ Route::middleware('auth')->group(function () {
         Route::resource('users', UserController::class);
 
         // Cluster Management Routes
+        Route::post('/clusters/sync-stakeholders', [ClusterController::class, 'syncStakeholders'])->name('clusters.sync-stakeholders');
+        Route::post('/clusters/wizard/store', [ClusterController::class, 'storeWizard'])->name('clusters.wizard.store');
+        Route::get('/clusters/residents/template', [ClusterController::class, 'downloadResidentTemplate'])->name('clusters.residents.template');
+        Route::post('/clusters/{cluster}/residents/upload', [ClusterController::class, 'uploadResidents'])->name('clusters.residents.upload');
+        
+        // Cluster Basic Info
+        Route::put('/clusters/{cluster}/basic-info', [ClusterController::class, 'updateBasicInfo'])->name('clusters.basic-info.update');
+        
+        // Cluster Offices CRUD
+        Route::post('/clusters/{cluster}/offices', [ClusterController::class, 'storeOffice'])->name('clusters.offices.store');
+        Route::put('/clusters/{cluster}/offices/{office}', [ClusterController::class, 'updateOffice'])->name('clusters.offices.update');
+        Route::delete('/clusters/{cluster}/offices/{office}', [ClusterController::class, 'deleteOffice'])->name('clusters.offices.delete');
+        
+        // Cluster Patrols CRUD
+        Route::post('/clusters/{cluster}/patrols', [ClusterController::class, 'storePatrol'])->name('clusters.patrols.store');
+        Route::put('/clusters/{cluster}/patrols/{patrol}', [ClusterController::class, 'updatePatrol'])->name('clusters.patrols.update');
+        Route::delete('/clusters/{cluster}/patrols/{patrol}', [ClusterController::class, 'deletePatrol'])->name('clusters.patrols.delete');
+        
+        // Cluster Bank Accounts CRUD
+        Route::post('/clusters/{cluster}/banks', [ClusterController::class, 'storeBankAccount'])->name('clusters.banks.store');
+        Route::put('/clusters/{cluster}/banks/{bank}', [ClusterController::class, 'updateBankAccount'])->name('clusters.banks.update');
+        Route::delete('/clusters/{cluster}/banks/{bank}', [ClusterController::class, 'deleteBankAccount'])->name('clusters.banks.delete');
+        
+        // Cluster Employees CRUD
+        Route::post('/clusters/{cluster}/employees', [ClusterController::class, 'storeEmployee'])->name('clusters.employees.store');
+        Route::put('/clusters/{cluster}/employees/{employee}', [ClusterController::class, 'updateEmployee'])->name('clusters.employees.update');
+        Route::delete('/clusters/{cluster}/employees/{employee}', [ClusterController::class, 'deleteEmployee'])->name('clusters.employees.delete');
+        
+        // Cluster Securities CRUD
+        Route::post('/clusters/{cluster}/securities', [ClusterController::class, 'storeSecurity'])->name('clusters.securities.store');
+        Route::put('/clusters/{cluster}/securities/{security}', [ClusterController::class, 'updateSecurity'])->name('clusters.securities.update');
+        Route::delete('/clusters/{cluster}/securities/{security}', [ClusterController::class, 'deleteSecurity'])->name('clusters.securities.delete');
+        
         Route::resource('clusters', ClusterController::class);
 
         // Finance Management Routes

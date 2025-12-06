@@ -13,11 +13,15 @@ class ClusterSubscription extends Model
     protected $fillable = [
         'cluster_id',
         'package_id',
+        'package_name',
+        'package',
         'price',
+        'total',
+        'invoice_code',
         'months',
         'expired_at',
-        'active',
         'code',
+        'active',
         'status',
         'created_id',
         'updated_id',
@@ -27,8 +31,8 @@ class ClusterSubscription extends Model
     protected $casts = [
         'price' => 'decimal:2',
         'months' => 'integer',
-        'active' => 'boolean',
         'expired_at' => 'date',
+        'active' => 'boolean',
     ];
 
     public function getTable()

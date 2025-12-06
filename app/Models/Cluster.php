@@ -21,6 +21,9 @@ class Cluster extends Model
         'radius_checkin',
         'radius_patrol',
         'active_flag',
+        'total_employees',
+        'total_securities',
+        'total_residents',
         'created_id',
         'updated_id',
         'deleted_id',
@@ -73,6 +76,13 @@ class Cluster extends Model
     public function subscriptions()
     {
         return $this->hasMany(ClusterSubscription::class, 'cluster_id');
+    }
+
+    public function latestSubscription()
+    {
+        return $this->hasOne(ClusterSubscription::class, 'cluster_id')
+            ->orderBy('expired_at', 'desc')
+            ->latest();
     }
 
     public function activeSubscription()

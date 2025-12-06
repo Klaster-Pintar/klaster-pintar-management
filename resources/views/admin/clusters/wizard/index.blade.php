@@ -326,9 +326,7 @@
                     securities: [],
 
                     // Step 6
-                    bank_accounts: [
-                        { account_number: '', account_holder: '', bank_type: 'BCA', bank_code_id: 1 }
-                    ],
+                    bank_accounts: [],
 
                     // Step 7
                     residents: []
@@ -1375,9 +1373,197 @@
                     document.getElementById('securityCsvFileInput').value = '';
                 },
 
-                submitForm() {
-                    // Submit via normal form submission or AJAX
-                    this.$el.closest('form').submit();
+                async submitForm() {
+                    // Validate required fields
+                    if (!this.formData.name || !this.formData.phone || !this.formData.email) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Data Tidak Lengkap',
+                            text: 'Mohon lengkapi Nama Cluster, Telepon, dan Email terlebih dahulu',
+                            confirmButtonColor: '#3b82f6'
+                        });
+                        this.currentStep = 1;
+                        return;
+                    }
+
+                    if (this.formData.offices.length === 0) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Kantor Belum Ditambahkan',
+                            text: 'Minimal tambahkan 1 lokasi kantor cluster',
+                            confirmButtonColor: '#3b82f6'
+                        });
+                        this.currentStep = 2;
+                        return;
+                    }
+
+                    // Show loading
+                    Swal.fire({
+                        title: 'Menyimpan Data...',
+                        html: 'Mohon tunggu, sedang memproses pendaftaran cluster',
+                        allowOutsideClick: false,
+                        allowEscapeKey: false,
+                        didOpen: () => {
+                            Swal.showLoading();
+                        }
+                    });
+
+                    try {
+                        // Prepare FormData
+                        const formData = new FormData();
+
+                        // Step 1 - Basic Info
+                        formData.append('name', this.formData.name || '');
+                        formData.append('description', this.formData.description || '');
+                        formData.append('phone', this.formData.phone || '');
+                        formData.append('email', this.formData.email || '');
+                        formData.append('radius_checkin', this.formData.radius_checkin || 5);
+                        formData.append('radius_patrol', this.formData.radius_patrol || 5);
+
+                        // File uploads
+                        if (this.formData.logo) {
+                            formData.append('logo', this.formData.logo);
+                        }
+                        if (this.formData.picture) {
+                            formData.append('picture', this.formData.picture);
+                        }
+
+                        // Step 2 - Offices (required)
+                        this.formData.offices.forEach((office, index) => {
+                            formData.append(`offices[${index}][name]`, office.name || '');
+                            formData.append(`offices[${index}][type_id]`, office.type_id || 1);
+                            formData.append(`offices[${index}][latitude]`, office.latitude || 0);
+                            formData.append(`offices[${index}][longitude]`, office.longitude || 0);
+                        });
+
+                        // Step 3 - Patrols (optional)
+                        if (this.formData.patrols && this.formData.patrols.length > 0) {
+                            this.formData.patrols.forEach((patrol, index) => {
+                                formData.append(`patrols[${index}][day_type_id]`, patrol.day_type_id || 1);
+                                if (patrol.pinpoints && patrol.pinpoints.length > 0) {
+                                    patrol.pinpoints.forEach((pinpoint, pinIndex) => {
+                                        formData.append(`patrols[${index}][pinpoints][${pinIndex}][lat]`, pinpoint.lat || 0);
+                                        formData.append(`patrols[${index}][pinpoints][${pinIndex}][lng]`, pinpoint.lng || 0);
+                                    });
+                                }
+                            });
+                        }
+
+                        // Step 4 - Employees (optional)
+                        if (this.formData.employees && this.formData.employees.length > 0) {
+                            this.formData.employees.forEach((employee, index) => {
+                                formData.append(`employees[${index}][name]`, employee.name || '');
+                                formData.append(`employees[${index}][username]`, employee.username || '');
+                                formData.append(`employees[${index}][email]`, employee.email || '');
+                                formData.append(`employees[${index}][phone]`, employee.phone || '');
+                                formData.append(`employees[${index}][gender]`, employee.gender || '');
+                                formData.append(`employees[${index}][date_birth]`, employee.date_birth || '');
+                                formData.append(`employees[${index}][address]`, employee.address || '');
+                                formData.append(`employees[${index}][role]`, employee.role || 'ADMIN');
+                            });
+                        }
+
+                        // Step 5 - Securities (optional)
+                        if (this.formData.securities && this.formData.securities.length > 0) {
+                            this.formData.securities.forEach((security, index) => {
+                                formData.append(`securities[${index}][name]`, security.name || '');
+                                formData.append(`securities[${index}][username]`, security.username || '');
+                                formData.append(`securities[${index}][email]`, security.email || '');
+                                formData.append(`securities[${index}][phone]`, security.phone || '');
+                                formData.append(`securities[${index}][gender]`, security.gender || '');
+                                formData.append(`securities[${index}][date_birth]`, security.date_birth || '');
+                                formData.append(`securities[${index}][address]`, security.address || '');
+                            });
+                        }
+
+                        // Step 6 - Bank Accounts (optional)
+                        if (this.formData.bank_accounts && this.formData.bank_accounts.length > 0) {
+                            this.formData.bank_accounts.forEach((bank, index) => {
+                                if (bank.account_number && bank.account_holder) {
+                                    formData.append(`bank_accounts[${index}][account_number]`, bank.account_number);
+                                    formData.append(`bank_accounts[${index}][account_holder]`, bank.account_holder);
+                                    formData.append(`bank_accounts[${index}][bank_type]`, bank.bank_type || 'BCA');
+                                    formData.append(`bank_accounts[${index}][bank_code_id]`, bank.bank_code_id || 1);
+                                }
+                            });
+                        }
+
+                        // Step 7 - Residents (optional)
+                        if (this.formData.residents && this.formData.residents.length > 0) {
+                            this.formData.residents.forEach((resident, index) => {
+                                formData.append(`residents[${index}][block_number]`, resident.block_number || '');
+                                formData.append(`residents[${index}][name]`, resident.name || '');
+                                formData.append(`residents[${index}][email]`, resident.email || '');
+                                formData.append(`residents[${index}][phone]`, resident.phone || '');
+                            });
+                        }
+
+                        // Send AJAX request
+                        const response = await fetch('{{ route('admin.clusters.wizard.store') }}', {
+                            method: 'POST',
+                            headers: {
+                                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                                'Accept': 'application/json'
+                            },
+                            body: formData
+                        });
+
+                        const result = await response.json();
+
+                        if (response.ok) {
+                            // Success
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Berhasil!',
+                                text: result.message || 'Cluster berhasil didaftarkan',
+                                confirmButtonColor: '#10b981',
+                                confirmButtonText: 'Lihat Detail Cluster'
+                            }).then((swalResult) => {
+                                if (swalResult.isConfirmed) {
+                                    window.location.href = result.redirect || '{{ route('admin.clusters.index') }}';
+                                }
+                            });
+                        } else if (response.status === 422) {
+                            // Validation Error
+                            let errorMessage = 'Terdapat kesalahan pada data yang diinput:\n\n';
+                            
+                            if (result.errors) {
+                                Object.keys(result.errors).forEach(field => {
+                                    errorMessage += `• ${result.errors[field][0]}\n`;
+                                });
+                            } else {
+                                errorMessage = result.message || 'Data tidak valid';
+                            }
+
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Validasi Gagal',
+                                html: errorMessage.replace(/\n/g, '<br>'),
+                                confirmButtonColor: '#ef4444',
+                                confirmButtonText: 'Perbaiki Data'
+                            });
+                        } else {
+                            // Server Error
+                            throw new Error(result.message || 'Terjadi kesalahan server');
+                        }
+
+                    } catch (error) {
+                        console.error('Submit error:', error);
+                        
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Terjadi Kesalahan',
+                            text: error.message || 'Gagal menyimpan data. Silakan coba lagi.',
+                            confirmButtonColor: '#ef4444',
+                            showCancelButton: true,
+                            confirmButtonText: 'Coba Lagi',
+                            cancelButtonText: 'Batal'
+                        }).then((result) => {
+                            if (result.isConfirmed) {
+                                this.submitForm();
+                            }
+                        });
+                    }
                 }
             }
         }

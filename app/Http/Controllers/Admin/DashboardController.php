@@ -18,6 +18,7 @@ class DashboardController extends Controller
             'active_clusters' => Cluster::where('active_flag', 1)->count(),
             'pending_subscriptions' => 0, // Set to 0 as requested
             'total_revenue' => 0, // Set to 0 as requested
+            'recent_clusters' => Cluster::latest('created_at')->take(5)->get(),
         ];
 
         return view('admin.dashboard', $data);

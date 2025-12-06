@@ -33,11 +33,18 @@
                                     <p class="text-gray-600 text-xs lg:text-sm mt-0.5">Kelola data cluster iHome</p>
                                 </div>
                             </div>
-                            <a href="{{ route('admin.clusters.create') }}"
-                                class="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-green-600 to-green-700 text-white text-sm rounded-lg hover:shadow-lg transition-all font-semibold">
-                                <i class="fa-solid fa-plus-circle"></i>
-                                <span>Tambah Cluster</span>
-                            </a>
+                            <div class="flex gap-2">
+                                <button type="button" onclick="syncStakeholders()"
+                                    class="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white text-sm rounded-lg hover:shadow-lg transition-all font-semibold">
+                                    <i class="fa-solid fa-sync"></i>
+                                    <span>Sync Data</span>
+                                </button>
+                                <a href="{{ route('admin.clusters.create') }}"
+                                    class="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-green-600 to-green-700 text-white text-sm rounded-lg hover:shadow-lg transition-all font-semibold">
+                                    <i class="fa-solid fa-plus-circle"></i>
+                                    <span>Tambah Cluster</span>
+                                </a>
+                            </div>
                         </div>
                     </div>
 
@@ -49,6 +56,19 @@
                                 <p class="text-green-800 font-medium">{{ session('success') }}</p>
                             </div>
                             <button @click="show = false" class="text-green-500 hover:text-green-700">
+                                <i class="fa-solid fa-xmark text-xl"></i>
+                            </button>
+                        </div>
+                    @endif
+
+                    @if (session('error'))
+                        <div class="bg-red-50 border-l-4 border-red-500 p-4 rounded-lg shadow flex items-center gap-3"
+                            x-data="{ show: true }" x-show="show" x-transition>
+                            <i class="fa-solid fa-circle-xmark text-red-500 text-xl"></i>
+                            <div class="flex-1">
+                                <p class="text-red-800 font-medium">{{ session('error') }}</p>
+                            </div>
+                            <button @click="show = false" class="text-red-500 hover:text-red-700">
                                 <i class="fa-solid fa-xmark text-xl"></i>
                             </button>
                         </div>
@@ -109,8 +129,8 @@
                                         <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">
                                             <i class="fa-solid fa-address-card mr-1"></i> Kontak
                                         </th>
-                                        <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider">
-                                            <i class="fa-solid fa-users mr-1"></i> Staff
+                                        <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider w-64">
+                                            <i class="fa-solid fa-users mr-1"></i> Stakeholders
                                         </th>
                                         <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider">
                                             <i class="fa-solid fa-toggle-on mr-1"></i> Status
@@ -160,29 +180,29 @@
                                                 </div>
                                             </td>
 
-                                            <!-- Staff Stats -->
+                                            <!-- Stakeholders Stats -->
                                             <td class="px-4 py-4">
-                                                <div class="flex items-center justify-center gap-3">
+                                                <div class="flex items-center justify-center gap-4">
                                                     <!-- Employees -->
                                                     <div class="text-center">
-                                                        <div class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-blue-700 font-bold text-xs">
-                                                            {{ $cluster->employees_count ?? 0 }}
+                                                        <div class="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-blue-100 text-blue-700 font-bold text-sm shadow-sm">
+                                                            {{ $cluster->total_employees ?? 0 }}
                                                         </div>
-                                                        <p class="text-xs text-gray-500 mt-0.5">Emp</p>
+                                                        <p class="text-xs text-gray-600 mt-1 font-medium">Employee</p>
                                                     </div>
                                                     <!-- Securities -->
                                                     <div class="text-center">
-                                                        <div class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-orange-100 text-orange-700 font-bold text-xs">
-                                                            {{ $cluster->securities_count ?? 0 }}
+                                                        <div class="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-orange-100 text-orange-700 font-bold text-sm shadow-sm">
+                                                            {{ $cluster->total_securities ?? 0 }}
                                                         </div>
-                                                        <p class="text-xs text-gray-500 mt-0.5">Sec</p>
+                                                        <p class="text-xs text-gray-600 mt-1 font-medium">Security</p>
                                                     </div>
-                                                    <!-- Offices -->
+                                                    <!-- Residents -->
                                                     <div class="text-center">
-                                                        <div class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-purple-100 text-purple-700 font-bold text-xs">
-                                                            {{ $cluster->offices_count ?? 0 }}
+                                                        <div class="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-purple-100 text-purple-700 font-bold text-sm shadow-sm">
+                                                            {{ $cluster->total_residents ?? 0 }}
                                                         </div>
-                                                        <p class="text-xs text-gray-500 mt-0.5">Off</p>
+                                                        <p class="text-xs text-gray-600 mt-1 font-medium">Resident</p>
                                                     </div>
                                                 </div>
                                             </td>
@@ -208,15 +228,10 @@
                                                         title="Detail">
                                                         <i class="fa-solid fa-eye text-sm"></i>
                                                     </a>
-                                                    <a href="{{ route('admin.clusters.edit', $cluster) }}"
-                                                        class="inline-flex items-center justify-center w-8 h-8 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                                                        title="Edit">
-                                                        <i class="fa-solid fa-edit text-sm"></i>
-                                                    </a>
                                                     <button type="button"
                                                         class="inline-flex items-center justify-center w-8 h-8 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
                                                         title="Delete"
-                                                        onclick="confirm('Hapus cluster {{ $cluster->name }}?') && document.getElementById('delete-form-{{ $cluster->id }}').submit()">
+                                                        onclick="deleteCluster({{ $cluster->id }}, '{{ $cluster->name }}')">
                                                         <i class="fa-solid fa-trash text-sm"></i>
                                                     </button>
                                                     <form id="delete-form-{{ $cluster->id }}" 
@@ -262,3 +277,101 @@
         </div>
     </div>
 @endsection
+
+@push('scripts')
+<script>
+function deleteCluster(clusterId, clusterName) {
+    Swal.fire({
+        title: 'Hapus Cluster?',
+        html: `<div class="text-left">
+            <p class="mb-3 font-semibold text-gray-800">Cluster: <span class="text-red-600">${clusterName}</span></p>
+            <p class="mb-2 text-sm text-gray-700">Data yang akan dihapus:</p>
+            <ul class="list-disc list-inside text-sm text-gray-600 space-y-1">
+                <li>Data Cluster</li>
+                <li>Kantor/Office</li>
+                <li>Patroli</li>
+                <li>Karyawan/Employee</li>
+                <li>Satpam/Security</li>
+                <li>Bank Account</li>
+                <li>Resident/Penghuni</li>
+                <li>Subscription</li>
+                <li>IoT Devices</li>
+            </ul>
+            <p class="mt-3 text-sm text-red-600 font-semibold">
+                <i class="fa-solid fa-exclamation-triangle mr-1"></i>
+                Tindakan ini tidak dapat dibatalkan!
+            </p>
+        </div>`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc2626',
+        cancelButtonColor: '#6b7280',
+        confirmButtonText: '<i class="fa-solid fa-trash mr-2"></i>Ya, Hapus',
+        cancelButtonText: '<i class="fa-solid fa-times mr-2"></i>Batal',
+        showLoaderOnConfirm: true,
+        preConfirm: () => {
+            const form = document.getElementById(`delete-form-${clusterId}`);
+            form.submit();
+        },
+        allowOutsideClick: () => !Swal.isLoading()
+    });
+}
+
+function syncStakeholders() {
+    Swal.fire({
+        title: 'Sinkronisasi Data Stakeholders',
+        text: 'Proses ini akan menghitung ulang jumlah Employee, Security, dan Resident untuk semua cluster. Lanjutkan?',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#2563eb',
+        cancelButtonColor: '#6b7280',
+        confirmButtonText: '<i class="fa-solid fa-sync mr-2"></i>Ya, Sinkronkan',
+        cancelButtonText: '<i class="fa-solid fa-times mr-2"></i>Batal',
+        showLoaderOnConfirm: true,
+        preConfirm: () => {
+            return fetch('{{ route("admin.clusters.sync-stakeholders") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Accept': 'application/json'
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (!data.success) {
+                    throw new Error(data.message || 'Terjadi kesalahan');
+                }
+                return data;
+            })
+            .catch(error => {
+                Swal.showValidationMessage(`Request failed: ${error}`);
+            });
+        },
+        allowOutsideClick: () => !Swal.isLoading()
+    }).then((result) => {
+        if (result.isConfirmed && result.value) {
+            Swal.fire({
+                title: 'Berhasil!',
+                html: `<div class="text-center">
+                    <i class="fa-solid fa-check-circle text-6xl text-green-500 mb-4"></i>
+                    <p class="text-lg font-semibold mb-2">${result.value.message}</p>
+                    <p class="text-sm text-gray-600">Halaman akan dimuat ulang untuk menampilkan data terbaru</p>
+                </div>`,
+                icon: 'success',
+                showConfirmButton: false,
+                timer: 2000,
+                timerProgressBar: true
+            }).then(() => {
+                window.location.reload();
+            });
+        }
+    });
+}
+</script>
+@endpush

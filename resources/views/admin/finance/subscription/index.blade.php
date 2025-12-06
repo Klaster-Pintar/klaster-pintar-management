@@ -46,7 +46,7 @@
                             <div class="flex items-center justify-between">
                                 <div>
                                     <p class="text-sm opacity-90 font-medium">Active Subscriptions</p>
-                                    <h3 class="text-3xl font-bold mt-1">{{ $clusters->where('latestSubscription.active', true)->where('latestSubscription.expired_at', '>=', now())->count() }}</h3>
+                                    <h3 class="text-3xl font-bold mt-1">{{ $stats['active_paid'] }}</h3>
                                 </div>
                                 <div class="w-12 h-12 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
                                     <i class="fa-solid fa-check-circle text-2xl"></i>
@@ -59,7 +59,7 @@
                             <div class="flex items-center justify-between">
                                 <div>
                                     <p class="text-sm opacity-90 font-medium">Expired</p>
-                                    <h3 class="text-3xl font-bold mt-1">{{ $clusters->where('latestSubscription.expired_at', '<', now())->count() }}</h3>
+                                    <h3 class="text-3xl font-bold mt-1">{{ $stats['expired'] }}</h3>
                                 </div>
                                 <div class="w-12 h-12 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
                                     <i class="fa-solid fa-exclamation-triangle text-2xl"></i>
@@ -72,7 +72,7 @@
                             <div class="flex items-center justify-between">
                                 <div>
                                     <p class="text-sm opacity-90 font-medium">Expiring Soon (7 days)</p>
-                                    <h3 class="text-3xl font-bold mt-1">{{ $clusters->filter(function($c) { return $c->latestSubscription && $c->latestSubscription->daysRemaining() <= 7 && $c->latestSubscription->daysRemaining() > 0; })->count() }}</h3>
+                                    <h3 class="text-3xl font-bold mt-1">{{ $stats['expiring_soon'] }}</h3>
                                 </div>
                                 <div class="w-12 h-12 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
                                     <i class="fa-solid fa-clock text-2xl"></i>
@@ -81,14 +81,14 @@
                         </div>
 
                         <div
-                            class="bg-gradient-to-br from-gray-500 to-gray-600 rounded-xl shadow-lg p-4 text-white transform hover:scale-105 transition">
+                            class="bg-gradient-to-br from-cyan-500 to-cyan-600 rounded-xl shadow-lg p-4 text-white transform hover:scale-105 transition">
                             <div class="flex items-center justify-between">
                                 <div>
-                                    <p class="text-sm opacity-90 font-medium">No Subscription</p>
-                                    <h3 class="text-3xl font-bold mt-1">{{ $clusters->where('latestSubscription', null)->count() }}</h3>
+                                    <p class="text-sm opacity-90 font-medium">Free Trial</p>
+                                    <h3 class="text-3xl font-bold mt-1">{{ $stats['free_trial'] }}</h3>
                                 </div>
                                 <div class="w-12 h-12 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
-                                    <i class="fa-solid fa-ban text-2xl"></i>
+                                    <i class="fa-solid fa-gift text-2xl"></i>
                                 </div>
                             </div>
                         </div>
@@ -116,12 +116,11 @@
                                 <select name="status"
                                     class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition">
                                     <option value="">Semua Status</option>
-                                    <option value="active" {{ request('status') == 'active' ? 'selected' : '' }}>Active
+                                    <option value="active" {{ request('status') == 'active' ? 'selected' : '' }}>Active (Paid)
+                                    </option>
+                                    <option value="free-trial" {{ request('status') == 'free-trial' ? 'selected' : '' }}>Free Trial
                                     </option>
                                     <option value="expired" {{ request('status') == 'expired' ? 'selected' : '' }}>Expired
-                                    </option>
-                                    <option value="no-subscription"
-                                        {{ request('status') == 'no-subscription' ? 'selected' : '' }}>No Subscription
                                     </option>
                                 </select>
                             </div>
@@ -182,17 +181,58 @@
                                             </td>
                                             <td class="px-4 py-4 text-right">
                                                 @if ($subscription)
-                                                    <span class="text-sm font-bold text-purple-700">
-                                                        Rp {{ number_format($subscription->price, 0, ',', '.') }}
-                                                    </span>
-                                                    <div class="text-xs text-gray-500">{{ $subscription->months }} bulan
-                                                    </div>
+                                                    @if ($subscription->price == 0)
+                                                        <span class="inline-flex items-center gap-1 text-sm font-bold text-cyan-700">
+                                                            <i class="fa-solid fa-gift"></i>
+                                                            FREE TRIAL
+                                                        </span>
+                                                        <div class="text-xs text-gray-500">{{ $subscription->months }} bulan</div>
+                                                    @else
+                                                        <span class="text-sm font-bold text-purple-700">
+                                                            Rp {{ number_format($subscription->price, 0, ',', '.') }}
+                                                        </span>
+                                                        <div class="text-xs text-gray-500">{{ $subscription->months }} bulan</div>
+                                                    @endif
                                                 @else
                                                     <span class="text-sm text-gray-400">-</span>
                                                 @endif
                                             </td>
                                             <td class="px-4 py-4">
                                                 @if ($subscription)
+                                                    @php
+                                                        // Calculate time remaining with appropriate unit
+                                                        $now = now();
+                                                        $expiredAt = $subscription->expired_at;
+                                                        // Round to nearest integer for cleaner display
+                                                        $diffInDays = round($now->diffInDays($expiredAt, false));
+                                                        $diffInWeeks = floor($diffInDays / 7);
+                                                        $diffInMonths = $now->diffInMonths($expiredAt, false);
+                                                        
+                                                        // Determine best display format
+                                                        if ($diffInMonths >= 2) {
+                                                            $timeRemaining = $diffInMonths . ' bulan lagi';
+                                                        } elseif ($diffInMonths == 1) {
+                                                            $remainingDays = $diffInDays - 30;
+                                                            if ($remainingDays > 7) {
+                                                                $timeRemaining = '1 bulan ' . $remainingDays . ' hari lagi';
+                                                            } else {
+                                                                $timeRemaining = '1 bulan lagi';
+                                                            }
+                                                        } elseif ($diffInWeeks >= 2) {
+                                                            $timeRemaining = $diffInWeeks . ' minggu lagi';
+                                                        } elseif ($diffInWeeks == 1) {
+                                                            $remainingDays = $diffInDays - 7;
+                                                            if ($remainingDays > 0) {
+                                                                $timeRemaining = '1 minggu ' . $remainingDays . ' hari lagi';
+                                                            } else {
+                                                                $timeRemaining = '1 minggu lagi';
+                                                            }
+                                                        } elseif ($diffInDays > 0) {
+                                                            $timeRemaining = $diffInDays . ' hari lagi';
+                                                        } else {
+                                                            $timeRemaining = 'Hari ini';
+                                                        }
+                                                    @endphp
                                                     <div class="flex items-center gap-2">
                                                         <i
                                                             class="fa-solid fa-calendar {{ $isExpired ? 'text-red-600' : ($daysRemaining <= 7 ? 'text-orange-600' : 'text-green-600') }}"></i>
@@ -204,7 +244,7 @@
                                                                 @if ($isExpired)
                                                                     Expired {{ $subscription->expired_at->diffForHumans() }}
                                                                 @else
-                                                                    {{ $daysRemaining }} hari lagi
+                                                                    {{ $timeRemaining }}
                                                                 @endif
                                                             </div>
                                                         </div>
@@ -215,12 +255,18 @@
                                             </td>
                                             <td class="px-4 py-4 text-center">
                                                 @if ($subscription && !$isExpired)
-                                                    <span
-                                                        class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold {{ $daysRemaining <= 7 ? 'bg-orange-100 text-orange-800' : 'bg-green-100 text-green-800' }}">
-                                                        <i
-                                                            class="fa-solid {{ $daysRemaining <= 7 ? 'fa-clock' : 'fa-check-circle' }} mr-1"></i>
-                                                        {{ $daysRemaining <= 7 ? 'Expiring Soon' : 'Active' }}
-                                                    </span>
+                                                    @if ($subscription->price == 0)
+                                                        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-cyan-100 text-cyan-800">
+                                                            <i class="fa-solid fa-gift mr-1"></i> Free Trial
+                                                        </span>
+                                                    @else
+                                                        <span
+                                                            class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold {{ $daysRemaining <= 7 ? 'bg-orange-100 text-orange-800' : 'bg-green-100 text-green-800' }}">
+                                                            <i
+                                                                class="fa-solid {{ $daysRemaining <= 7 ? 'fa-clock' : 'fa-check-circle' }} mr-1"></i>
+                                                            {{ $daysRemaining <= 7 ? 'Expiring Soon' : 'Active' }}
+                                                        </span>
+                                                    @endif
                                                 @elseif($subscription && $isExpired)
                                                     <span
                                                         class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800">
@@ -229,7 +275,7 @@
                                                 @else
                                                     <span
                                                         class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-800">
-                                                        <i class="fa-solid fa-ban mr-1"></i> No Subscription
+                                                        <i class="fa-solid fa-ban mr-1"></i> No Data
                                                     </span>
                                                 @endif
                                             </td>
@@ -237,7 +283,13 @@
                                                 <button type="button" onclick="editSubscription({{ $cluster->id }})"
                                                     class="px-4 py-2 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-lg hover:shadow-lg transition text-xs font-semibold">
                                                     <i class="fa-solid fa-edit mr-1"></i>
-                                                    {{ $subscription && !$isExpired ? 'Extend' : 'Set Subscription' }}
+                                                    @if($subscription && !$isExpired && $subscription->price == 0)
+                                                        Upgrade to Paid
+                                                    @elseif($subscription && !$isExpired)
+                                                        Extend
+                                                    @else
+                                                        Set Subscription
+                                                    @endif
                                                 </button>
                                             </td>
                                         </tr>
@@ -267,11 +319,11 @@
     </div>
 
     <!-- Modal Edit Subscription -->
-    <div id="editModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50"
+    <div id="editModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 p-4"
         style="display: none;">
-        <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-hidden">
-            <!-- Modal Header -->
-            <div class="bg-gradient-to-r from-purple-600 to-purple-700 px-6 py-4 flex items-center justify-between">
+        <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[95vh] flex flex-col">
+            <!-- Modal Header - Fixed -->
+            <div class="bg-gradient-to-r from-purple-600 to-purple-700 px-6 py-4 flex items-center justify-between flex-shrink-0">
                 <h3 class="text-xl font-bold text-white flex items-center gap-2">
                     <i class="fa-solid fa-edit"></i>
                     Edit Subscription
@@ -281,8 +333,9 @@
                 </button>
             </div>
 
-            <!-- Modal Body -->
-            <form id="subscriptionForm" onsubmit="submitSubscription(event)" class="p-6 space-y-6">
+            <!-- Modal Body - Scrollable -->
+            <form id="subscriptionForm" onsubmit="submitSubscription(event)" class="flex flex-col flex-1 overflow-hidden">
+                <div class="p-6 space-y-6 overflow-y-auto flex-1">
                 <input type="hidden" id="cluster-id" name="cluster_id">
 
                 <!-- Cluster Info -->
@@ -300,9 +353,9 @@
                 </div>
 
                 <!-- Current Subscription Info -->
-                <div id="current-subscription-info" class="bg-blue-50 rounded-lg p-4" style="display: none;">
+                <div id="current-subscription-info" class="rounded-lg p-4" style="display: none;">
                     <h5 class="font-semibold text-gray-800 mb-2 flex items-center gap-2">
-                        <i class="fa-solid fa-info-circle text-blue-600"></i>
+                        <i class="fa-solid fa-info-circle"></i>
                         Current Subscription
                     </h5>
                     <div class="grid grid-cols-2 gap-3 text-sm">
@@ -313,6 +366,30 @@
                         <div>
                             <span class="text-gray-600">Expired At:</span>
                             <span class="font-semibold text-gray-800 ml-2" id="current-expired">-</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Free Trial Info Box -->
+                <div class="bg-cyan-50 border-l-4 border-cyan-500 rounded-lg p-4">
+                    <div class="flex items-start gap-3">
+                        <i class="fa-solid fa-gift text-cyan-600 text-xl mt-0.5"></i>
+                        <div class="flex-1">
+                            <h5 class="font-semibold text-cyan-900 mb-1">Free Trial Information</h5>
+                            <ul class="text-sm text-cyan-800 space-y-1">
+                                <li class="flex items-start gap-2">
+                                    <i class="fa-solid fa-check text-cyan-600 mt-0.5"></i>
+                                    <span>Free Trial default: <strong>Rp 0</strong> dengan durasi <strong>3 bulan</strong></span>
+                                </li>
+                                <li class="flex items-start gap-2">
+                                    <i class="fa-solid fa-check text-cyan-600 mt-0.5"></i>
+                                    <span>Untuk upgrade ke paid subscription, masukkan nominal dan durasi yang diinginkan</span>
+                                </li>
+                                <li class="flex items-start gap-2">
+                                    <i class="fa-solid fa-check text-cyan-600 mt-0.5"></i>
+                                    <span>Nominal bisa custom sesuai kesepakatan dengan cluster</span>
+                                </li>
+                            </ul>
                         </div>
                     </div>
                 </div>
@@ -389,9 +466,11 @@
                     </select>
                     <p class="text-xs text-gray-500 mt-1">Subscription akan otomatis di-extend dari tanggal sekarang</p>
                 </div>
+                </div>
+                <!-- End Scrollable Area -->
 
-                <!-- Submit Buttons -->
-                <div class="flex items-center gap-3 pt-4 border-t border-gray-200">
+                <!-- Submit Buttons - Fixed at Bottom -->
+                <div class="flex items-center gap-3 p-6 pt-4 border-t border-gray-200 bg-gray-50 flex-shrink-0">
                     <button type="button" onclick="closeEditModal()"
                         class="flex-1 px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition font-semibold">
                         <i class="fa-solid fa-times mr-1"></i> Cancel
@@ -421,14 +500,23 @@
 
                         // Show current subscription if exists
                         if (data.subscription) {
-                            document.getElementById('current-subscription-info').style.display = 'block';
-                            document.getElementById('current-amount').textContent = 'Rp ' + Number(data.subscription
-                                .price).toLocaleString('id-ID');
+                            const currentSubInfo = document.getElementById('current-subscription-info');
+                            currentSubInfo.style.display = 'block';
+                            
+                            // Check if Free Trial
+                            if (data.subscription.price == 0) {
+                                currentSubInfo.className = 'bg-cyan-50 border-l-4 border-cyan-500 rounded-lg p-4';
+                                document.getElementById('current-amount').innerHTML = '<span class="inline-flex items-center gap-1 text-cyan-700"><i class="fa-solid fa-gift"></i> FREE TRIAL</span>';
+                            } else {
+                                currentSubInfo.className = 'bg-blue-50 border-l-4 border-blue-500 rounded-lg p-4';
+                                document.getElementById('current-amount').textContent = 'Rp ' + Number(data.subscription.price).toLocaleString('id-ID');
+                            }
+                            
                             document.getElementById('current-expired').textContent = new Date(data.subscription
                                 .expired_at).toLocaleDateString('id-ID');
 
-                            // Pre-fill amount
-                            document.getElementById('amount').value = data.subscription.price;
+                            // Pre-fill amount (don't pre-fill if Free Trial)
+                            document.getElementById('amount').value = data.subscription.price > 0 ? data.subscription.price : '';
                         } else {
                             document.getElementById('current-subscription-info').style.display = 'none';
                             document.getElementById('amount').value = '';

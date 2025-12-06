@@ -146,34 +146,34 @@
                                 <span>Quick Actions</span>
                             </h3>
                             <div class="space-y-2.5">
-                                <button
+                                <a href="{{ route('admin.clusters.create') }}"
                                     class="w-full text-left px-3 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg flex items-center gap-2.5 hover:shadow-lg transition-all">
                                     <div class="w-9 h-9 rounded-lg bg-white bg-opacity-20 flex items-center justify-center">
                                         <i class="fa-solid fa-plus text-sm"></i>
                                     </div>
                                     <span class="font-medium text-sm">Create New Cluster</span>
-                                </button>
-                                <button
+                                </a>
+                                <a href="{{ route('admin.users.create') }}"
                                     class="w-full text-left px-3 py-2.5 bg-gray-50 hover:bg-gray-100 text-gray-700 rounded-lg flex items-center gap-2.5 transition-all border border-gray-200">
                                     <div class="w-9 h-9 rounded-lg bg-blue-100 flex items-center justify-center">
                                         <i class="fa-solid fa-user-plus text-blue-600 text-sm"></i>
                                     </div>
                                     <span class="font-medium text-sm">Invite Admin</span>
-                                </button>
-                                <button
+                                </a>
+                                <a href="{{ route('admin.finance.subscription.index') }}"
                                     class="w-full text-left px-3 py-2.5 bg-gray-50 hover:bg-gray-100 text-gray-700 rounded-lg flex items-center gap-2.5 transition-all border border-gray-200">
                                     <div class="w-9 h-9 rounded-lg bg-green-100 flex items-center justify-center">
                                         <i class="fa-solid fa-file-invoice-dollar text-green-600 text-sm"></i>
                                     </div>
                                     <span class="font-medium text-sm">Billing Overview</span>
-                                </button>
-                                <button
+                                </a>
+                                <a href="{{ route('admin.affiliate.revenue.index') }}"
                                     class="w-full text-left px-3 py-2.5 bg-gray-50 hover:bg-gray-100 text-gray-700 rounded-lg flex items-center gap-2.5 transition-all border border-gray-200">
                                     <div class="w-9 h-9 rounded-lg bg-purple-100 flex items-center justify-center">
                                         <i class="fa-solid fa-chart-pie text-purple-600 text-sm"></i>
                                     </div>
-                                    <span class="font-medium">View Reports</span>
-                                </button>
+                                    <span class="font-medium text-sm">View Reports</span>
+                                </a>
                             </div>
                         </div>
                     </div>
@@ -187,23 +187,68 @@
                                 <span>Cluster Terbaru</span>
                             </h3>
                             <div class="space-y-2.5">
-                                @for ($i = 1; $i <= 5; $i++)
+                                @forelse ($recent_clusters as $cluster)
+                                    @php
+                                        $createdTime = strtotime($cluster->created_at);
+                                        $currentTime = time();
+                                        $timeDiff = $currentTime - $createdTime;
+                                        
+                                        $seconds = $timeDiff;
+                                        $minutes = floor($seconds / 60);
+                                        $hours = floor($minutes / 60);
+                                        $days = floor($hours / 24);
+                                        $weeks = floor($days / 7);
+                                        $months = floor($days / 30);
+                                        $years = floor($days / 365);
+                                        
+                                        if ($seconds < 60) {
+                                            $timeAgo = 'Baru saja';
+                                        } elseif ($minutes < 60) {
+                                            $timeAgo = $minutes . ' menit yang lalu';
+                                        } elseif ($hours < 24) {
+                                            $timeAgo = $hours . ' jam yang lalu';
+                                        } elseif ($days == 1) {
+                                            $timeAgo = 'Kemarin';
+                                        } elseif ($days < 7) {
+                                            $timeAgo = $days . ' hari yang lalu';
+                                        } elseif ($weeks < 4) {
+                                            $timeAgo = $weeks . ' minggu yang lalu';
+                                        } elseif ($months < 12) {
+                                            $timeAgo = $months . ' bulan yang lalu';
+                                        } else {
+                                            $timeAgo = $years . ' tahun yang lalu';
+                                        }
+                                    @endphp
                                     <div
                                         class="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition">
                                         <div class="flex items-center gap-2.5">
-                                            <div
-                                                class="w-9 h-9 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-sm">
-                                                {{ chr(64 + $i) }}
-                                            </div>
+                                            @if ($cluster->logo && file_exists(storage_path('app/public/' . $cluster->logo)))
+                                                <img src="{{ asset('storage/' . $cluster->logo) }}" 
+                                                    alt="{{ $cluster->name }}"
+                                                    class="w-9 h-9 rounded-full object-cover">
+                                            @else
+                                                <div
+                                                    class="w-9 h-9 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-sm">
+                                                    {{ strtoupper(substr($cluster->name, 0, 1)) }}
+                                                </div>
+                                            @endif
                                             <div>
-                                                <p class="font-medium text-gray-800 text-sm">Cluster {{ chr(64 + $i) }}</p>
-                                                <p class="text-xs text-gray-500">Registered {{ $i }} days ago</p>
+                                                <p class="font-medium text-gray-800 text-sm">{{ $cluster->name }}</p>
+                                                <p class="text-xs">
+                                                    <span class="text-gray-500">Terdaftar</span>
+                                                    <span class="font-semibold text-blue-600">{{ $timeAgo }}</span>
+                                                </p>
                                             </div>
                                         </div>
                                         <span
-                                            class="px-2.5 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold">Active</span>
+                                            class="px-2.5 py-1 {{ $cluster->active_flag ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700' }} rounded-full text-xs font-semibold">{{ $cluster->active_flag ? 'Active' : 'Inactive' }}</span>
                                     </div>
-                                @endfor
+                                @empty
+                                    <div class="text-center py-8 text-gray-500">
+                                        <i class="fa-solid fa-inbox text-4xl mb-2"></i>
+                                        <p class="text-sm">Belum ada cluster terdaftar</p>
+                                    </div>
+                                @endforelse
                             </div>
                         </div>
 
@@ -504,11 +549,4 @@
             });
         });
     </script>
-    </div>
-    </main>
-
-    <!-- Footer Component -->
-    <x-admin.footer />
-    </div>
-    </div>
 @endpush
