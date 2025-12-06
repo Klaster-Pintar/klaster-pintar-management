@@ -217,11 +217,10 @@
                                                         title="Edit">
                                                         <i class="fa-solid fa-edit"></i>
                                                     </a>
-                                                    <form action="{{ route('admin.iot.device-management.destroy', $device) }}" method="POST" class="inline"
-                                                        onsubmit="return confirm('Yakin ingin menghapus device ini?')">
+                                                    <form action="{{ route('admin.iot.device-management.destroy', $device) }}" method="POST" class="inline delete-form">
                                                         @csrf
                                                         @method('DELETE')
-                                                        <button type="submit"
+                                                        <button type="button" onclick="confirmDelete(this)"
                                                             class="px-2 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200 transition text-xs"
                                                             title="Hapus">
                                                             <i class="fa-solid fa-trash"></i>
@@ -256,14 +255,55 @@
             <x-admin.footer />
         </div>
     </div>
-@endsection
 
-@if(session('success'))
-    @push('scripts')
-        <script>
-            document.addEventListener('DOMContentLoaded', function() {
-                alert('{{ session('success') }}');
+    <!-- SweetAlert2 CDN -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <script>
+        function confirmDelete(button) {
+            Swal.fire({
+                title: 'Hapus Device?',
+                text: "Data device akan dihapus permanen!",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#dc2626',
+                cancelButtonColor: '#6b7280',
+                confirmButtonText: 'Ya, Hapus!',
+                cancelButtonText: 'Batal'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    button.closest('form').submit();
+                }
             });
-        </script>
-    @endpush
-@endif
+        }
+
+        @if(session('success'))
+            Swal.fire({
+                icon: 'success',
+                title: 'Berhasil!',
+                text: '{{ session('success') }}',
+                timer: 3000,
+                showConfirmButton: false
+            });
+        @endif
+
+        @if(session('error'))
+            Swal.fire({
+                icon: 'error',
+                title: 'Gagal!',
+                text: '{{ session('error') }}',
+                confirmButtonColor: '#3b82f6'
+            });
+        @endif
+
+        @if($errors->any())
+            Swal.fire({
+                icon: 'error',
+                title: 'Validation Error!',
+                html: '<ul style="text-align: left;">@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul>',
+                confirmButtonColor: '#3b82f6'
+            });
+        @endif
+    </script>
+@endsection

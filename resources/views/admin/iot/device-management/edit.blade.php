@@ -38,7 +38,7 @@
 
                     <!-- Form -->
                     <div class="bg-white rounded-xl shadow-md p-6">
-                        <form action="{{ route('admin.iot.device-management.update', $device) }}" method="POST">
+                        <form id="deviceEditForm" action="{{ route('admin.iot.device-management.update', $device) }}" method="POST" onsubmit="return confirmUpdate(event)">
                             @csrf
                             @method('PUT')
 
@@ -78,13 +78,8 @@
                                         <select name="type" required
                                             class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 @error('type') border-red-500 @enderror">
                                             <option value="">Pilih Type</option>
-                                            <option value="Motion Sensor" {{ old('type', $device->type) == 'Motion Sensor' ? 'selected' : '' }}>Motion Sensor</option>
-                                            <option value="Door Sensor" {{ old('type', $device->type) == 'Door Sensor' ? 'selected' : '' }}>Door Sensor</option>
-                                            <option value="CCTV Camera" {{ old('type', $device->type) == 'CCTV Camera' ? 'selected' : '' }}>CCTV Camera</option>
-                                            <option value="Alarm System" {{ old('type', $device->type) == 'Alarm System' ? 'selected' : '' }}>Alarm System</option>
-                                            <option value="Access Control" {{ old('type', $device->type) == 'Access Control' ? 'selected' : '' }}>Access Control</option>
-                                            <option value="Fire Detector" {{ old('type', $device->type) == 'Fire Detector' ? 'selected' : '' }}>Fire Detector</option>
-                                            <option value="Smart Lock" {{ old('type', $device->type) == 'Smart Lock' ? 'selected' : '' }}>Smart Lock</option>
+                                            <option value="Gate Controller" {{ old('type', $device->type) == 'Gate Controller' ? 'selected' : '' }}>Gate Controller</option>
+                                            <option value="IoT Sirine" {{ old('type', $device->type) == 'IoT Sirine' ? 'selected' : '' }}>IoT Sirine</option>
                                         </select>
                                         @error('type')
                                             <p class="text-xs text-red-500 mt-1">{{ $message }}</p>
@@ -237,4 +232,49 @@
             <x-admin.footer />
         </div>
     </div>
+
+    <!-- SweetAlert2 CDN -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <script>
+        function confirmUpdate(event) {
+            event.preventDefault();
+            
+            Swal.fire({
+                title: 'Update Device?',
+                text: "Pastikan perubahan data sudah benar!",
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#eab308',
+                cancelButtonColor: '#6b7280',
+                confirmButtonText: 'Ya, Update!',
+                cancelButtonText: 'Batal'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    document.getElementById('deviceEditForm').submit();
+                }
+            });
+            
+            return false;
+        }
+
+        @if(session('error'))
+            Swal.fire({
+                icon: 'error',
+                title: 'Gagal!',
+                text: '{{ session('error') }}',
+                confirmButtonColor: '#3b82f6'
+            });
+        @endif
+
+        @if($errors->any())
+            Swal.fire({
+                icon: 'error',
+                title: 'Validation Error!',
+                html: '<ul style="text-align: left;">@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul>',
+                confirmButtonColor: '#3b82f6'
+            });
+        @endif
+    </script>
 @endsection
