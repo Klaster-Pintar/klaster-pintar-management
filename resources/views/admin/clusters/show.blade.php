@@ -29,7 +29,7 @@
 @endpush
 
 @section('content')
-<div class="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-green-50 py-8 px-4">
+<div class="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-green-50 py-8 px-4" data-cluster-id="{{ $cluster->id }}">
     <div class="max-w-7xl mx-auto">
         
         <!-- Header Section -->
@@ -85,7 +85,7 @@
                 
                 <!-- Actions -->
                 <div class="flex gap-2">
-                    <button onclick="openBasicInfoModal({{ json_encode($cluster) }})" 
+                    <button onclick="openBasicInfoModal()" 
                         class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-semibold">
                         <i class="fa-solid fa-edit mr-1"></i> Edit Info Dasar
                     </button>
@@ -800,53 +800,53 @@ document.getElementById('uploadResidentForm').addEventListener('submit', functio
 
 <!-- MODALS -->
 <!-- Basic Info Modal -->
-<div id="basicInfoModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
+<div id="modalBasicInfo" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
     <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         <div class="sticky top-0 bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 flex justify-between items-center">
             <h3 class="text-xl font-bold text-white">Edit Info Dasar Cluster</h3>
             <button onclick="closeBasicInfoModal()" class="text-white hover:text-gray-200 text-2xl">&times;</button>
         </div>
         
-        <form id="basicInfoForm" class="p-6 space-y-4">
-            <input type="hidden" id="basic_cluster_id" value="{{ $cluster->id }}">
+        <form id="basicInfoForm" class="p-6 space-y-4" onsubmit="event.preventDefault(); saveBasicInfo({{ $cluster->id }});">
+            <input type="hidden" id="basicInfoClusterId" value="{{ $cluster->id }}">
             
             <div>
                 <label class="block text-sm font-semibold text-gray-700 mb-2">Nama Cluster</label>
-                <input type="text" id="basic_name" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" required>
+                <input type="text" id="basicInfoName" value="{{ $cluster->name }}" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" required>
             </div>
             
             <div>
                 <label class="block text-sm font-semibold text-gray-700 mb-2">Deskripsi</label>
-                <textarea id="basic_description" rows="3" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"></textarea>
+                <textarea id="basicInfoDescription" rows="3" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">{{ $cluster->description }}</textarea>
             </div>
             
             <div class="grid grid-cols-2 gap-4">
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-2">Telepon</label>
-                    <input type="text" id="basic_phone" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    <input type="text" id="basicInfoPhone" value="{{ $cluster->phone }}" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                 </div>
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-2">Email</label>
-                    <input type="email" id="basic_email" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    <input type="email" id="basicInfoEmail" value="{{ $cluster->email }}" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                 </div>
             </div>
             
             <div class="grid grid-cols-2 gap-4">
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-2">Radius Checkin (meter)</label>
-                    <input type="number" id="basic_radius_checkin" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    <input type="number" id="basicInfoRadiusCheckin" value="{{ $cluster->radius_checkin }}" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                 </div>
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-2">Radius Patrol (meter)</label>
-                    <input type="number" id="basic_radius_patrol" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    <input type="number" id="basicInfoRadiusPatrol" value="{{ $cluster->radius_patrol }}" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                 </div>
             </div>
             
             <div>
                 <label class="block text-sm font-semibold text-gray-700 mb-2">Status</label>
-                <select id="basic_active_flag" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                    <option value="Y">Aktif</option>
-                    <option value="N">Nonaktif</option>
+                <select id="basicInfoActiveFlag" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    <option value="1" {{ $cluster->active_flag == 1 ? 'selected' : '' }}>Aktif</option>
+                    <option value="0" {{ $cluster->active_flag == 0 ? 'selected' : '' }}>Nonaktif</option>
                 </select>
             </div>
             

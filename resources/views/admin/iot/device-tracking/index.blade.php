@@ -246,8 +246,8 @@
                                         </div>
                                     </div>
 
-                                    <!-- Signal Strength -->
-                                    @if($device->signal_strength)
+                                    {{-- Signal Strength - Hidden for now --}}
+                                    {{-- @if($device->signal_strength)
                                         <div class="space-y-1">
                                             <div class="flex items-center justify-between text-xs">
                                                 <span class="text-gray-600">Signal Strength:</span>
@@ -260,7 +260,7 @@
                                                     style="width: {{ $device->signal_strength }}%"></div>
                                             </div>
                                         </div>
-                                    @endif
+                                    @endif --}}
 
                                     <!-- Last Connected -->
                                     <div class="pt-2 border-t border-gray-200">

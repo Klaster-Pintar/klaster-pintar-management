@@ -12,17 +12,8 @@ let patrolPolyline = null;
 
 // ==================== BASIC INFO ====================
 
-function openBasicInfoModal(cluster) {
-    // Populate form
-    document.getElementById('basicInfoName').value = cluster.name;
-    document.getElementById('basicInfoDescription').value = cluster.description || '';
-    document.getElementById('basicInfoPhone').value = cluster.phone;
-    document.getElementById('basicInfoEmail').value = cluster.email;
-    document.getElementById('basicInfoRadiusCheckin').value = cluster.radius_checkin || 50;
-    document.getElementById('basicInfoRadiusPatrol').value = cluster.radius_patrol || 100;
-    document.getElementById('basicInfoActiveFlag').checked = cluster.active_flag;
-    
-    // Show modal
+function openBasicInfoModal() {
+    // Show modal - data already populated from server-side
     document.getElementById('modalBasicInfo').classList.remove('hidden');
 }
 
@@ -36,9 +27,9 @@ async function saveBasicInfo(clusterId) {
         description: document.getElementById('basicInfoDescription').value,
         phone: document.getElementById('basicInfoPhone').value,
         email: document.getElementById('basicInfoEmail').value,
-        radius_checkin: parseInt(document.getElementById('basicInfoRadiusCheckin').value),
-        radius_patrol: parseInt(document.getElementById('basicInfoRadiusPatrol').value),
-        active_flag: document.getElementById('basicInfoActiveFlag').checked ? 1 : 0
+        radius_checkin: parseInt(document.getElementById('basicInfoRadiusCheckin').value) || 0,
+        radius_patrol: parseInt(document.getElementById('basicInfoRadiusPatrol').value) || 0,
+        active_flag: parseInt(document.getElementById('basicInfoActiveFlag').value)
     };
     
     try {

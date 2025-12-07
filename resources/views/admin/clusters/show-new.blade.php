@@ -4,6 +4,10 @@
 
 @push('styles')
 <style>
+    [x-cloak] { 
+        display: none !important; 
+    }
+    
     .stat-card {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         transition: transform 0.3s ease, box-shadow 0.3s ease;
@@ -237,12 +241,82 @@
     </div>
 
     <!-- Modals will be included here -->
-    @include('admin.clusters.partials.modal-basic-info')
-    @include('admin.clusters.partials.modal-office')
-    @include('admin.clusters.partials.modal-patrol')
-    @include('admin.clusters.partials.modal-bank')
-    @include('admin.clusters.partials.modal-employee')
-    @include('admin.clusters.partials.modal-security')
+    <!-- Modal Basic Info -->
+    <div x-show="showBasicInfoModal" 
+         x-cloak
+         @click.self="showBasicInfoModal = false"
+         class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div class="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 rounded-t-xl">
+                <h3 class="text-xl font-bold text-white">Edit Info Dasar Cluster</h3>
+            </div>
+            
+            <form @submit.prevent="saveBasicInfo" class="p-6 space-y-4">
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Nama Cluster *</label>
+                    <input type="text" x-model="basicInfoForm.name" required
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Deskripsi</label>
+                    <textarea x-model="basicInfoForm.description" rows="3"
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"></textarea>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Telepon *</label>
+                        <input type="text" x-model="basicInfoForm.phone" required
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Email *</label>
+                        <input type="email" x-model="basicInfoForm.email" required
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Radius Check-In (meter)</label>
+                        <input type="number" x-model="basicInfoForm.radius_checkin" min="0"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Radius Patrol (meter)</label>
+                        <input type="number" x-model="basicInfoForm.radius_patrol" min="0"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="flex items-center gap-2">
+                        <input type="checkbox" x-model="basicInfoForm.active_flag" class="rounded">
+                        <span class="text-sm font-semibold text-gray-700">Cluster Aktif</span>
+                    </label>
+                </div>
+                
+                <div class="flex gap-3 pt-4 border-t">
+                    <button type="submit" 
+                        class="flex-1 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-semibold">
+                        <i class="fa-solid fa-save mr-1"></i> Simpan
+                    </button>
+                    <button type="button" @click="showBasicInfoModal = false"
+                        class="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition font-semibold">
+                        Batal
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {{-- Placeholder for other modals - will be created as needed --}}
+    {{-- @include('admin.clusters.partials.modal-office') --}}
+    {{-- @include('admin.clusters.partials.modal-patrol') --}}
+    {{-- @include('admin.clusters.partials.modal-bank') --}}
+    {{-- @include('admin.clusters.partials.modal-employee') --}}
+    {{-- @include('admin.clusters.partials.modal-security') --}}
     
 </div>
 
