@@ -93,8 +93,6 @@
                                             Amount</th>
                                         <th class="px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider">
                                             Status</th>
-                                        <th class="px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider">
-                                            Description</th>
                                         <th class="px-4 py-4 text-center text-xs font-semibold uppercase tracking-wider">
                                             Action</th>
                                     </tr>
@@ -114,7 +112,7 @@
                                                 </div>
                                             </td>
                                             <td class="px-4 py-4 text-sm font-mono text-gray-700">
-                                                {{ $settlement->transaction_code }}
+                                                {{ $settlement->code ?? '-' }}
                                             </td>
                                             <td class="px-4 py-4 text-sm text-gray-900 font-medium">
                                                 {{ $settlement->cluster->name ?? '-' }}
@@ -139,9 +137,6 @@
                                                         <i class="fa-solid fa-clock mr-1"></i> Pending
                                                     </span>
                                                 @endif
-                                            </td>
-                                            <td class="px-4 py-4 text-sm text-gray-600 max-w-xs truncate">
-                                                {{ $settlement->description ?? '-' }}
                                             </td>
                                             <td class="px-4 py-4 text-sm text-center">
                                                 <div class="flex items-center justify-center gap-2">
@@ -232,6 +227,10 @@
                             <span class="text-gray-600">Total Amount:</span>
                             <span class="font-bold text-green-700 ml-2" id="modal-amount">-</span>
                         </div>
+                        <div class="col-span-2">
+                            <span class="text-gray-600">Description:</span>
+                            <span class="text-gray-800 ml-2" id="modal-description">-</span>
+                        </div>
                     </div>
                 </div>
 
@@ -268,47 +267,8 @@
         </div>
     </div>
 
-    <!-- Modal Reject -->
-    <div id="rejectModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50"
-        style="display: none;">
-        <div class="bg-white rounded-xl shadow-2xl max-w-md w-full mx-4">
-            <!-- Modal Header -->
-            <div class="bg-gradient-to-r from-red-600 to-red-700 px-6 py-4 flex items-center justify-between">
-                <h3 class="text-xl font-bold text-white flex items-center gap-2">
-                    <i class="fa-solid fa-times-circle"></i>
-                    Reject Settlement
-                </h3>
-                <button type="button" onclick="closeRejectModal()" class="text-white hover:text-gray-200 transition">
-                    <i class="fa-solid fa-times text-2xl"></i>
-                </button>
-            </div>
-
-            <!-- Modal Body -->
-            <div class="p-6">
-                <p class="text-gray-700 mb-4">Berikan alasan penolakan settlement ini:</p>
-                <textarea id="reject-reason" rows="4"
-                    class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent transition"
-                    placeholder="Alasan penolakan..."></textarea>
-            </div>
-
-            <!-- Modal Footer -->
-            <div class="bg-gray-50 px-6 py-4 flex justify-end gap-2 border-t border-gray-200">
-                <button type="button" onclick="closeRejectModal()"
-                    class="px-6 py-2.5 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition font-semibold">
-                    Batal
-                </button>
-                <button type="button" onclick="confirmReject()"
-                    class="px-6 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-semibold">
-                    <i class="fa-solid fa-times mr-1"></i> Reject
-                </button>
-            </div>
-        </div>
-    </div>
-
     @push('scripts')
         <script>
-            let currentRejectId = null;
-
             function viewDetail(id) {
                 fetch(`/admin/finance/settlement/${id}`)
                     .then(response => response.json())
@@ -316,9 +276,10 @@
                         if (data.success) {
                             // Populate withdrawal info
                             document.getElementById('modal-cluster-name').textContent = data.withdrawal.cluster.name;
-                            document.getElementById('modal-transaction-code').textContent = data.withdrawal.transaction_code;
+                            document.getElementById('modal-transaction-code').textContent = data.withdrawal.code || '-';
                             document.getElementById('modal-transaction-date').textContent = new Date(data.withdrawal.created_at).toLocaleDateString('id-ID');
                             document.getElementById('modal-amount').textContent = 'Rp ' + Number(data.withdrawal.amount).toLocaleString('id-ID');
+                            document.getElementById('modal-description').textContent = data.withdrawal.description || '-';
 
                             // Populate setoran table
                             const tbody = document.getElementById('setoran-tbody');
@@ -361,79 +322,146 @@
             }
 
             function approveSettlement(id) {
-                if (!confirm('Yakin ingin approve settlement ini?')) return;
+                Swal.fire({
+                    title: 'Approve Settlement?',
+                    text: 'Apakah Anda yakin ingin menyetujui settlement ini?',
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonColor: '#22c55e',
+                    cancelButtonColor: '#6b7280',
+                    confirmButtonText: '<i class="fa-solid fa-check mr-1"></i> Ya, Approve',
+                    cancelButtonText: 'Batal',
+                    reverseButtons: true
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        // Show loading
+                        Swal.fire({
+                            title: 'Processing...',
+                            text: 'Sedang memproses approval',
+                            allowOutsideClick: false,
+                            didOpen: () => {
+                                Swal.showLoading();
+                            }
+                        });
 
-                fetch(`/admin/finance/settlement/${id}/approve`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                        fetch(`/admin/finance/settlement/${id}/approve`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                            }
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'Berhasil!',
+                                    text: data.message,
+                                    confirmButtonColor: '#22c55e',
+                                    timer: 2000,
+                                    timerProgressBar: true
+                                }).then(() => {
+                                    location.reload();
+                                });
+                            } else {
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Gagal!',
+                                    text: data.message,
+                                    confirmButtonColor: '#ef4444'
+                                });
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Error!',
+                                text: 'Gagal approve settlement',
+                                confirmButtonColor: '#ef4444'
+                            });
+                        });
                     }
-                })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            alert(data.message);
-                            location.reload();
-                        } else {
-                            alert(data.message);
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error:', error);
-                        alert('Gagal approve settlement');
-                    });
+                });
             }
 
             function rejectSettlement(id) {
-                currentRejectId = id;
-                document.getElementById('reject-reason').value = '';
-                document.getElementById('rejectModal').style.display = 'flex';
-            }
-
-            function closeRejectModal() {
-                document.getElementById('rejectModal').style.display = 'none';
-                currentRejectId = null;
-            }
-
-            function confirmReject() {
-                const reason = document.getElementById('reject-reason').value.trim();
-
-                if (!reason) {
-                    alert('Alasan penolakan harus diisi');
-                    return;
-                }
-
-                fetch(`/admin/finance/settlement/${currentRejectId}/reject`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                    },
-                    body: JSON.stringify({ reason: reason })
-                })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            alert(data.message);
-                            location.reload();
-                        } else {
-                            alert(data.message);
+                Swal.fire({
+                    title: 'Reject Settlement?',
+                    text: 'Masukkan alasan penolakan:',
+                    input: 'textarea',
+                    inputPlaceholder: 'Alasan penolakan settlement...',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#ef4444',
+                    cancelButtonColor: '#6b7280',
+                    confirmButtonText: '<i class="fa-solid fa-times mr-1"></i> Ya, Reject',
+                    cancelButtonText: 'Batal',
+                    reverseButtons: true,
+                    inputValidator: (value) => {
+                        if (!value) {
+                            return 'Alasan penolakan harus diisi!';
                         }
-                    })
-                    .catch(error => {
-                        console.error('Error:', error);
-                        alert('Gagal reject settlement');
-                    });
+                    }
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        // Show loading
+                        Swal.fire({
+                            title: 'Processing...',
+                            text: 'Sedang memproses rejection',
+                            allowOutsideClick: false,
+                            didOpen: () => {
+                                Swal.showLoading();
+                            }
+                        });
+
+                        fetch(`/admin/finance/settlement/${id}/reject`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                            },
+                            body: JSON.stringify({ reason: result.value })
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'Berhasil!',
+                                    text: data.message,
+                                    confirmButtonColor: '#22c55e',
+                                    timer: 2000,
+                                    timerProgressBar: true
+                                }).then(() => {
+                                    location.reload();
+                                });
+                            } else {
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Gagal!',
+                                    text: data.message,
+                                    confirmButtonColor: '#ef4444'
+                                });
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Error!',
+                                text: 'Gagal reject settlement',
+                                confirmButtonColor: '#ef4444'
+                            });
+                        });
+                    }
+                });
             }
 
             // Close modal when clicking outside
             document.getElementById('detailModal').addEventListener('click', function (e) {
                 if (e.target === this) closeDetailModal();
-            });
-
-            document.getElementById('rejectModal').addEventListener('click', function (e) {
-                if (e.target === this) closeRejectModal();
             });
         </script>
     @endpush

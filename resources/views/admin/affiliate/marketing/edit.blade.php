@@ -146,21 +146,6 @@
                                     @enderror
                                 </div>
 
-                                <!-- Cluster Affiliate Name -->
-                                <div>
-                                    <label for="cluster_affiliate_name" class="block text-sm font-semibold text-gray-700 mb-2">
-                                        <i class="fa-solid fa-building mr-1 text-orange-600"></i> Nama Cluster Affiliate
-                                        <span class="text-red-500">*</span>
-                                    </label>
-                                    <input type="text"
-                                        class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent transition @error('cluster_affiliate_name') border-red-500 @enderror"
-                                        id="cluster_affiliate_name" name="cluster_affiliate_name"
-                                        value="{{ old('cluster_affiliate_name', $marketing->cluster_affiliate_name) }}" required>
-                                    @error('cluster_affiliate_name')
-                                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                                    @enderror
-                                </div>
-
                                 <!-- No KTP -->
                                 <div>
                                     <label for="id_card_number" class="block text-sm font-semibold text-gray-700 mb-2">

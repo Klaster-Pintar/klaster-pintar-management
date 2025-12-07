@@ -85,16 +85,7 @@
                         </div>
                     </div>
 
-                    @if(session('success'))
-                        <div class="bg-green-50 border-l-4 border-green-500 p-4 rounded-lg">
-                            <div class="flex items-center">
-                                <i class="fa-solid fa-check-circle text-green-500 text-xl mr-3"></i>
-                                <p class="text-green-700 font-medium">{{ session('success') }}</p>
-                            </div>
-                        </div>
-                    @endif
-
-                    <!-- Search & Filter -->
+                    <!-- Filters -->
                     <div class="bg-white rounded-xl shadow-sm p-4 lg:p-6 border border-gray-100">
                         <form method="GET">
                             <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -133,7 +124,6 @@
                                         <th class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Marketing</th>
                                         <th class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Kode Referral</th>
                                         <th class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Kontak</th>
-                                        <th class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Cluster Affiliate</th>
                                         <th class="px-6 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">Total Cluster</th>
                                         <th class="px-6 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">Status</th>
                                         <th class="px-6 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">Actions</th>
@@ -159,7 +149,6 @@
                                             <td class="px-6 py-4 text-sm text-gray-600">
                                                 <i class="fa-solid fa-phone-alt mr-2 text-gray-400"></i>{{ $marketing->phone }}
                                             </td>
-                                            <td class="px-6 py-4 text-sm text-gray-600">{{ $marketing->cluster_affiliate_name }}</td>
                                             <td class="px-6 py-4 text-center">
                                                 <span class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold">{{ $marketing->getTotalClusters() }} Cluster</span>
                                             </td>
@@ -206,4 +195,29 @@
             </main>
         </div>
     </div>
+
+    <!-- SweetAlert2 CDN -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <script>
+        @if(session('success'))
+            Swal.fire({
+                icon: 'success',
+                title: 'Berhasil!',
+                text: '{{ session('success') }}',
+                timer: 3000,
+                showConfirmButton: false
+            });
+        @endif
+
+        @if(session('error'))
+            Swal.fire({
+                icon: 'error',
+                title: 'Gagal!',
+                text: '{{ session('error') }}',
+                confirmButtonColor: '#db2777'
+            });
+        @endif
+    </script>
 @endsection

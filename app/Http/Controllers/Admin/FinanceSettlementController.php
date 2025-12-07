@@ -15,18 +15,25 @@ class FinanceSettlementController extends Controller
      */
     public function index(Request $request)
     {
-        $query = ClusterBalanceWithdraw::with(['cluster'])
-            ->penarikan()
-            ->orderBy('created_at', 'desc');
+        $query = ClusterBalanceWithdraw::with(['cluster']);
 
         // Filter by status if provided
         if ($request->has('status') && $request->status !== '') {
             if ($request->status == 'pending') {
-                $query->pending();
+                // Pending: parent_id NULL dan transaction_type STORAN
+                $query->whereNull('parent_id')
+                      ->where('transaction_type', 'SETORAN')
+                      ->where('is_valid', 0);
             } elseif ($request->status == 'approved') {
-                $query->approved();
+                // Approved: PENARIKAN yang sudah di-approve
+                $query->penarikan()->approved();
             }
+        } else {
+            // Default: tampilkan PENARIKAN saja
+            $query->penarikan();
         }
+
+        $query->orderBy('created_at', 'desc');
 
         // Search by cluster name or code
         if ($request->has('search') && $request->search !== '') {
@@ -50,7 +57,19 @@ class FinanceSettlementController extends Controller
             ->findOrFail($id);
 
         // Get SETORAN transactions with parent_id = $id
-        $setorans = ClusterBalanceWithdraw::where('parent_id', $id)
+        if($withdrawal->is_valid) {
+           $setorans = ClusterBalanceWithdraw::where('parent_id', $id)
+            ->where('transaction_type', 'SETORAN')
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+            return response()->json([
+                'success' => true,
+                'withdrawal' => $withdrawal,
+                'setorans' => $setorans
+            ]);
+        }
+        $setorans = ClusterBalanceWithdraw::where('is_valid', 0)
             ->where('transaction_type', 'SETORAN')
             ->orderBy('created_at', 'desc')
             ->get();
@@ -79,11 +98,21 @@ class FinanceSettlementController extends Controller
                 ], 400);
             }
 
+            // Update withdrawal to approved
             $withdrawal->update([
                 'is_valid' => 1,
-                'status' => 'APPROVED',
                 'updated_id' => Auth::id(),
             ]);
+
+            // Update all pending SETORAN: set is_valid=1 and parent_id=$withdrawal->id
+            ClusterBalanceWithdraw::where('transaction_type', 'SETORAN')
+                ->where('is_valid', 0)
+                ->whereNull('parent_id')
+                ->update([
+                    'is_valid' => 1,
+                    'parent_id' => $withdrawal->id,
+                    'updated_id' => Auth::id(),
+                ]);
 
             DB::commit();
 

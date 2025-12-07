@@ -206,7 +206,7 @@
                                                         // Round to nearest integer for cleaner display
                                                         $diffInDays = round($now->diffInDays($expiredAt, false));
                                                         $diffInWeeks = floor($diffInDays / 7);
-                                                        $diffInMonths = $now->diffInMonths($expiredAt, false);
+                                                        $diffInMonths = round($now->diffInMonths($expiredAt, false));
                                                         
                                                         // Determine best display format
                                                         if ($diffInMonths >= 2) {
